@@ -7,7 +7,7 @@
 
 export type RecipeId =
   | 'rain' | 'rain-window' | 'brown' | 'fire' | 'bedroom' | 'city' | 'forest' | 'nature'
-  | 'ocean' | 'library' | 'cafe' | 'snow' | 'garden';
+  | 'ocean' | 'library' | 'cafe' | 'snow' | 'garden' | 'desert' | 'space';
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -125,6 +125,11 @@ class Kit {
     pump();
     const id = setInterval(pump, 300);
     this.stops.push(() => clearInterval(id));
+  }
+
+  /** Registers extra cleanup for nodes a recipe creates directly. */
+  track(stop: () => void) {
+    this.stops.push(stop);
   }
 
   pan(value: number, to: AudioNode = this.out) {
@@ -287,6 +292,25 @@ const RECIPES: Record<RecipeId, (k: Kit) => void> = {
     }
     k.bed('brown', 'lowpass', 250, 0.2);
     k.every(2.5, 8, (t) => k.bell(t, rand(2600, 4200), rand(0.012, 0.03), 0.35, k.pan(rand(-0.7, 0.7))));
+  },
+  desert: (k) => {
+    wind(k, 0.26, 300, 1.4);
+    k.bed('brown', 'lowpass', 140, 0.2);
+    // Sand hissing across the dunes in gusts.
+    k.every(6, 14, (t) => k.burst(t, { kind: 'pink', dur: rand(2, 3.5), attack: 1.2, type: 'highpass', freq: 4000, level: 0.05, pan: rand(-0.6, 0.6) }));
+  },
+  space: (k) => {
+    k.bed('brown', 'lowpass', 110, 0.4);
+    // A slow, detuned drone that swells and fades.
+    for (const [f, rate] of [[55, 0.03], [82.4, 0.021], [110.6, 0.017]]) {
+      const o = k.c.createOscillator();
+      o.frequency.value = f;
+      const g = k.gain(0.025);
+      o.connect(g);
+      o.start();
+      k.lfo(rate, 0.02, g.gain);
+      k.track(() => o.stop());
+    }
   },
   garden: (k) => {
     water(k, 1);

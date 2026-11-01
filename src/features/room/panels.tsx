@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { Flame, Pause, Play, Sprout, Timer as TimerIcon, Trash2, Volume2, VolumeX, X } from 'lucide-react';
+import { Cat as CatIcon, Flame, Hourglass, Lock, Moon as MoonIcon, Pause, Play, Sprout, Timer as TimerIcon, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { BUILT_IN_PRESETS, BREAK_LIMITS, FOCUS_LIMITS } from '../../domain/presets';
+import { achievementById } from '../../domain/achievements';
+import { requirementName, rewardById, REWARDS } from '../../domain/rewards';
+import { useRewards } from '../rewards/useRewards';
 import type { CompanionId, Preset } from '../../domain/types';
 import { useCustomPresets } from '../../data/hooks';
 import { newRecord, presetsRepo } from '../../data/repo';
@@ -12,7 +15,7 @@ import { COMPANIONS } from '../companions/Companions';
 import { ENVIRONMENTS } from '../scenes/catalog';
 import { room, useRoom } from '../session/sessionStore';
 
-export type PanelId = 'timer' | 'music' | 'scene' | 'companion' | 'thoughts';
+export type PanelId = 'timer' | 'music' | 'scene' | 'companion' | 'decor' | 'thoughts';
 
 export function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -169,6 +172,7 @@ export function MusicPanel() {
 export function ScenePanel() {
   const s = useSettings();
   const a = useAudio();
+  const { isUnlocked } = useRewards();
   return (
     <div className="stack">
       <div className="player-card">
@@ -182,41 +186,100 @@ export function ScenePanel() {
       </div>
       <VolumeRow label="Room sound" value={s.ambienceVolume} muted={s.ambienceMuted} onVolume={audio.setAmbienceVolume} onMute={audio.toggleAmbienceMute} />
       <div className="env-grid">
-        {ENVIRONMENTS.map((e) => (
-          <button
-            key={e.id}
-            className={`env ${s.environmentId === e.id ? 'is-active' : ''}`}
-            style={{ ['--glow' as string]: e.glow }}
-            onClick={() => audio.selectEnvironment(e.id)}
-          >
-            <span className="env__swatch" aria-hidden />
-            <span className="option__name">{e.name}</span>
-            <span className="option__sub">{e.blurb}</span>
-          </button>
-        ))}
+        {ENVIRONMENTS.map((e) => {
+          const locked = !isUnlocked(e.reward);
+          return (
+            <button
+              key={e.id}
+              className={`env ${s.environmentId === e.id ? 'is-active' : ''} ${locked ? 'is-locked' : ''}`}
+              style={{ ['--glow' as string]: e.glow }}
+              onClick={() => (locked ? toast(`Unlocks with “${unlockName(e.reward)}”`) : audio.selectEnvironment(e.id))}
+              aria-disabled={locked}
+            >
+              <span className="env__swatch" aria-hidden>
+                {locked && <Lock size={14} />}
+              </span>
+              <span className="option__name">{e.name}</span>
+              <span className="option__sub">{locked ? `Unlocks with ${unlockName(e.reward)}` : e.blurb}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-const COMPANION_ICONS: Record<CompanionId, typeof TimerIcon> = { timer: TimerIcon, candle: Flame, plant: Sprout };
+const unlockName = (rewardId?: string) => {
+  const r = rewardId ? rewardById(rewardId) : undefined;
+  return r ? requirementName(r) : '';
+};
+
+const COMPANION_ICONS: Record<CompanionId, typeof TimerIcon> = { timer: TimerIcon, candle: Flame, plant: Sprout, hourglass: Hourglass, moon: MoonIcon, cat: CatIcon };
 
 export function CompanionPanel() {
   const s = useSettings();
+  const { isUnlocked } = useRewards();
   return (
     <div className="stack-s">
       {COMPANIONS.map((c) => {
         const Icon = COMPANION_ICONS[c.id];
+        const locked = !isUnlocked(c.reward);
         return (
-          <button key={c.id} className={`option option--row ${s.companionId === c.id ? 'is-active' : ''}`} onClick={() => updateSettings({ companionId: c.id })}>
-            <Icon size={22} strokeWidth={1.6} />
+          <button
+            key={c.id}
+            className={`option option--row ${s.companionId === c.id ? 'is-active' : ''} ${locked ? 'is-locked' : ''}`}
+            onClick={() => (locked ? toast(`Unlocks with “${unlockName(c.reward)}”`) : updateSettings({ companionId: c.id }))}
+            aria-disabled={locked}
+          >
+            {locked ? <Lock size={22} strokeWidth={1.6} /> : <Icon size={22} strokeWidth={1.6} />}
             <span>
               <span className="option__name">{c.name}</span>
-              <span className="option__sub">{c.blurb}</span>
+              <span className="option__sub">{locked ? `Unlocks with ${unlockName(c.reward)}` : c.blurb}</span>
             </span>
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/** Earned decorations, each switchable; locked ones show what unlocks them. */
+export function DecorPanel() {
+  const s = useSettings();
+  const { isUnlocked, unlockedAchievements } = useRewards();
+  const decor = REWARDS.filter((r) => r.kind === 'decor');
+  const earned = decor.filter((r) => isUnlocked(r.id)).length;
+  const toggle = (id: string, on: boolean) => {
+    const off = new Set(s.decorOff);
+    if (on) off.delete(id);
+    else off.add(id);
+    updateSettings({ decorOff: [...off] });
+  };
+  return (
+    <div className="stack">
+      <p className="muted small">
+        Decorations are earned through achievements, never bought. {earned} of {decor.length} earned. New ones appear in your room automatically.
+      </p>
+      <div className="stack-s">
+        {decor.map((r) => {
+          const unlocked = isUnlocked(r.id);
+          const a = achievementById(r.requires);
+          return unlocked ? (
+            <Toggle key={r.id} label={r.name} hint={r.description} checked={!s.decorOff.includes(r.id)} onChange={(v) => toggle(r.id, v)} />
+          ) : (
+            <div key={r.id} className="decor-locked">
+              <Lock size={16} />
+              <span>
+                <span className="option__name">{r.name}</span>
+                <span className="option__sub">
+                  Unlocks with {a?.name}
+                  {a && !unlockedAchievements.has(a.id) ? ` · ${a.description}` : ''}
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

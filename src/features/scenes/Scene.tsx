@@ -367,7 +367,69 @@ const SCENES: Record<string, () => ReactNode> = {
       <Particles kind="petals" />
     </>
   ),
+
+  // ---- Unlockable environments (Phase 4 rewards) ----
+  'mountain-lake': () => (
+    <>
+      <div className="scene__sky" style={{ background: 'linear-gradient(#1b2140, #4c4468 38%, #c98a7e 56%, #e9b58a 60%, #2a2c44 60.2%, #1a1c2e)' }} />
+      <div className="scene__haze" style={{ background: 'radial-gradient(ellipse 40% 18% at 58% 60%, rgb(255 210 160 / 0.45), transparent 70%)' }} />
+      <Ridge seed={91} fill="#5a4a6a" top={170} rough={110} style={{ height: '46%', bottom: '40%' }} />
+      <Ridge seed={92} fill="#3b3350" top={250} rough={70} style={{ height: '36%', bottom: '40%' }} />
+      <Pines seed={93} fill="#1f1d2e" count={40} minH={40} maxH={90} style={{ height: '14%', bottom: '40%' }} />
+      <div className="scene__lake" />
+      <div className="scene__mist scene__mist--low" />
+    </>
+  ),
+  aurora: () => (
+    <>
+      <div className="scene__sky" style={{ background: 'linear-gradient(#03080f, #071722 45%, #0d2430 70%, #132c3a)' }} />
+      <Stars seed={101} count={120} maxY={0.6} />
+      <div className="scene__aurora">
+        <i style={{ ['--c' as string]: '#3fe0a0', animationDelay: '0s' }} />
+        <i style={{ ['--c' as string]: '#38c7c9', animationDelay: '-6s' }} />
+        <i style={{ ['--c' as string]: '#8c6cf0', animationDelay: '-12s' }} />
+      </div>
+      <Ridge seed={102} fill="#c3d3e4" top={300} rough={40} style={{ height: '30%' }} />
+      <Pines seed={103} fill="#06121a" count={30} minH={80} maxH={200} style={{ height: '40%' }} />
+      <Particles kind="snow" density={0.3} />
+    </>
+  ),
+  desert: () => (
+    <>
+      <div className="scene__sky" style={{ background: 'linear-gradient(#07071a, #16143a 50%, #3a2b4e 72%, #6a4a5a)' }} />
+      <Stars seed={111} count={170} maxY={0.65} />
+      <Moon x="70%" y="12%" size={84} color="#f4e9d2" />
+      <Dunes fill="#3d2f48" top={250} amp={40} period={700} style={{ height: '45%' }} />
+      <Dunes fill="#2a2036" top={300} amp={30} period={520} offset={160} style={{ height: '36%' }} />
+      <Dunes fill="#181322" top={340} amp={24} period={900} offset={420} style={{ height: '26%' }} />
+    </>
+  ),
+  starfield: () => (
+    <>
+      <div className="scene__sky" style={{ background: 'radial-gradient(ellipse at 30% 40%, #120c2a, #04040c 70%)' }} />
+      <div className="scene__nebula" />
+      <div className="scene__drift">
+        <Stars seed={121} count={160} maxY={1} />
+      </div>
+      <Stars seed={122} count={60} maxY={1} />
+      <div className="scene__planet" />
+    </>
+  ),
 };
+
+/** Smooth rolling dunes (Ridge is too jagged for sand). */
+function Dunes({ fill, top, amp, period, offset = 0, style }: { fill: string; top: number; amp: number; period: number; offset?: number; style?: CSSProperties }) {
+  const d = useMemo(() => {
+    const pts: string[] = [];
+    for (let x = 0; x <= W; x += 20) pts.push(`${x},${(top + amp * Math.sin(((x + offset) / period) * Math.PI * 2) + amp * 0.4 * Math.sin(((x + offset) / (period * 0.37)) * Math.PI * 2)).toFixed(1)}`);
+    return `M0,${H} L${pts.join(' L')} L${W},${H} Z`;
+  }, [top, amp, period, offset]);
+  return (
+    <Layer style={style}>
+      <path d={d} fill={fill} />
+    </Layer>
+  );
+}
 
 /** Full-bleed animated environment. Purely visual; sound is handled by the audio module. */
 export const Scene = memo(function Scene({ id, dim = 0.35 }: { id: string; dim?: number }) {

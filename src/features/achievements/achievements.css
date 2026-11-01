@@ -34,6 +34,7 @@
   background: rgb(6 5 4 / 0.82);
   backdrop-filter: blur(8px);
   animation: fade-in 0.4s var(--ease);
+  overflow-y: auto;
 }
 .celebration__glow { position: absolute; inset: 0; background: radial-gradient(circle at 50% 42%, rgb(217 168 108 / 0.22), transparent 55%); pointer-events: none; }
 .celebration__aurora {
@@ -98,7 +99,7 @@
 .celebration.is-legendary .celebration__actions { animation-delay: 1.8s; }
 
 .celebration__card--summary { width: min(520px, 100%); }
-.celebration__list { list-style: none; margin: 12px 0 0; padding: 0; width: 100%; max-height: 46vh; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+.celebration__list { list-style: none; margin: 12px 0 0; padding: 0; width: 100%; max-height: 38vh; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
 .celebration__list li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: rgb(239 230 216 / 0.04); animation: rise 0.5s var(--ease) both; }
 .celebration__list li > span { display: flex; flex-direction: column; min-width: 0; }
 @media (max-width: 480px) { .celebration__list { grid-template-columns: 1fr; } }
@@ -172,3 +173,11 @@
   /* 750h sits too close to the 1,000h crown to label on narrow screens. */
   .journey__node.is-minor .journey__label { display: none; }
 }
+
+/* Rewards on the celebration card */
+.celebration__rewards { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 6px 0 2px; animation: rise 0.6s 0.7s var(--ease) both; }
+.celebration__rewards > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.celebration__rewards .chip { background: var(--accent-soft); color: var(--text); }
+.celebration.is-legendary .celebration__rewards { animation-delay: 1.3s; }
+.ach-card__reward { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 0.75rem; color: var(--accent-2); }
+.ach-card.is-locked .ach-card__reward { color: var(--text-3); }

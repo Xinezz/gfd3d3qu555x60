@@ -81,7 +81,7 @@ export interface AchievementUnlock extends BaseRecord {
   seenAt: number | null;
 }
 
-export type CompanionId = 'timer' | 'candle' | 'plant';
+export type CompanionId = 'timer' | 'candle' | 'plant' | 'hourglass' | 'moon' | 'cat';
 
 export interface Settings {
   dailyGoalMin: number;
@@ -103,5 +103,7 @@ export interface Settings {
   chime: boolean;
   notifications: boolean;
   lightsOffFullscreen: boolean;
+  /** Unlocked decorations you have switched off (everything earned shows by default). */
+  decorOff: string[];
   updatedAt: number;
 }

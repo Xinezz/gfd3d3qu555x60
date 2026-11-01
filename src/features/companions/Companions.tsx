@@ -15,10 +15,13 @@ export interface CompanionProps {
   size?: 'normal' | 'large';
 }
 
-export const COMPANIONS: { id: CompanionId; name: string; blurb: string }[] = [
+export const COMPANIONS: { id: CompanionId; name: string; blurb: string; reward?: string }[] = [
   { id: 'timer', name: 'Timer', blurb: 'A calm countdown ring' },
   { id: 'candle', name: 'Candle', blurb: 'Burns down as you focus' },
   { id: 'plant', name: 'Plant', blurb: 'Grows with every hour you study' },
+  { id: 'hourglass', name: 'Hourglass', blurb: 'Sand runs down with your session' },
+  { id: 'moon', name: 'Moon', blurb: 'Waxes from new to full', reward: 'companion-moon' },
+  { id: 'cat', name: 'Cat', blurb: 'Naps while you focus', reward: 'companion-cat' },
 ];
 
 function Clock({ clock, label }: { clock: string; label: string }) {
@@ -157,8 +160,123 @@ export function Plant({ progress, clock, label, running, totalFocusMs, size }: C
   );
 }
 
+export function Hourglass({ progress, clock, label, running, size }: CompanionProps) {
+  // Sand drains from the top bulb into a growing mound in the bottom one.
+  const topSand = 1 - progress;
+  const topY = 46 + (1 - topSand) * 78; // surface drops from 46 to 124
+  const pile = progress * 62; // mound height in the bottom bulb
+  return (
+    <div className={`companion companion--hourglass ${size === 'large' ? 'is-large' : ''} ${running ? 'is-running' : ''}`}>
+      <svg viewBox="0 0 160 300" aria-hidden>
+        <defs>
+          <clipPath id="hg-top">
+            <path d="M40,40 L120,40 Q120,100 84,140 L76,140 Q40,100 40,40 Z" />
+          </clipPath>
+          <clipPath id="hg-bottom">
+            <path d="M76,160 L84,160 Q120,200 120,260 L40,260 Q40,200 76,160 Z" />
+          </clipPath>
+          <linearGradient id="hg-glass" x1="0" x2="1">
+            <stop offset="0" stopColor="rgb(255 255 255 / 0.10)" />
+            <stop offset="0.4" stopColor="rgb(255 255 255 / 0.02)" />
+            <stop offset="1" stopColor="rgb(255 255 255 / 0.08)" />
+          </linearGradient>
+        </defs>
+        <g clipPath="url(#hg-top)">
+          <rect x="30" y={topY} width="100" height={140 - topY} fill="#e3b06a" />
+        </g>
+        <g clipPath="url(#hg-bottom)">
+          <path d={`M30,262 L30,${262 - pile * 0.35} Q80,${262 - pile * 1.25} 130,${262 - pile * 0.35} L130,262 Z`} fill="#d9a35c" />
+        </g>
+        {running && progress < 1 && <line className="hg__stream" x1="80" y1="140" x2="80" y2={258 - pile} stroke="#e8b878" strokeWidth="2" />}
+        <path d="M40,40 L120,40 Q120,100 84,140 L84,160 Q120,200 120,260 L40,260 Q40,200 76,160 L76,140 Q40,100 40,40 Z" fill="url(#hg-glass)" stroke="rgb(240 230 215 / 0.35)" strokeWidth="2" />
+        <rect x="26" y="26" width="108" height="14" rx="4" fill="#6b4a32" />
+        <rect x="26" y="260" width="108" height="14" rx="4" fill="#6b4a32" />
+        <rect x="30" y="40" width="5" height="220" fill="#5a3d29" />
+        <rect x="125" y="40" width="5" height="220" fill="#5a3d29" />
+      </svg>
+      <Clock clock={clock} label={label} />
+    </div>
+  );
+}
+
+export function Moon({ progress, clock, label, running, size }: CompanionProps) {
+  // Waxing from new (0) to full (1): right half lit, terminator ellipse sweeps across.
+  const r = 70;
+  const cx = 100;
+  const cy = 100;
+  const k = Math.min(1, Math.max(0.02, progress));
+  const rx = r * Math.abs(1 - 2 * k);
+  const sweep = k > 0.5 ? 1 : 0;
+  const lit = `M${cx},${cy - r} A${r},${r} 0 0 1 ${cx},${cy + r} A${rx},${r} 0 0 ${sweep} ${cx},${cy - r} Z`;
+  return (
+    <div className={`companion companion--moon ${size === 'large' ? 'is-large' : ''} ${running ? 'is-running' : ''}`}>
+      <svg viewBox="0 0 200 200" aria-hidden>
+        <defs>
+          <radialGradient id="moon-lit" cx="0.4" cy="0.38">
+            <stop offset="0" stopColor="#fffaf0" />
+            <stop offset="0.7" stopColor="#efe3c8" />
+            <stop offset="1" stopColor="#cfc0a2" />
+          </radialGradient>
+        </defs>
+        <circle cx={cx} cy={cy} r={r + 26} fill="rgb(240 228 200)" opacity={0.04 + k * 0.12} className="moon__halo" />
+        <circle cx={cx} cy={cy} r={r} fill="#24222c" />
+        <path d={lit} fill="url(#moon-lit)" />
+        <g fill="rgb(120 105 85 / 0.22)">
+          <circle cx="118" cy="78" r="9" />
+          <circle cx="88" cy="122" r="12" />
+          <circle cx="126" cy="128" r="6" />
+          <circle cx="76" cy="84" r="5" />
+        </g>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgb(240 230 215 / 0.12)" />
+      </svg>
+      <Clock clock={clock} label={label} />
+    </div>
+  );
+}
+
+export function Cat({ clock, label, running, size }: CompanionProps) {
+  // Sleeps while a session runs; awake (and blinking) otherwise.
+  return (
+    <div className={`companion companion--cat ${size === 'large' ? 'is-large' : ''} ${running ? 'is-running' : 'is-awake'}`}>
+      <svg viewBox="0 0 200 220" aria-hidden>
+        <ellipse cx="100" cy="206" rx="70" ry="8" fill="rgb(0 0 0 / 0.35)" />
+        <path className="cat__tail" d="M140,196 Q186,196 182,150 Q180,128 166,136" fill="none" stroke="#4a3a30" strokeWidth="12" strokeLinecap="round" />
+        <g className="cat__body">
+          <path d="M52,204 Q40,120 100,112 Q160,120 148,204 Z" fill="#4a3a30" />
+          <path d="M80,204 Q84,170 100,168 Q116,170 120,204 Z" fill="#5c4a3d" />
+        </g>
+        <g className="cat__head">
+          <path d="M56,62 L62,20 L88,46 Z" fill="#4a3a30" />
+          <path d="M144,62 L138,20 L112,46 Z" fill="#4a3a30" />
+          <path d="M63,52 L66,30 L80,46 Z" fill="#c98f7a" opacity="0.6" />
+          <path d="M137,52 L134,30 L120,46 Z" fill="#c98f7a" opacity="0.6" />
+          <ellipse cx="100" cy="78" rx="50" ry="42" fill="#4a3a30" />
+          <g className="cat__eyes-open">
+            <ellipse cx="80" cy="76" rx="8" ry="10" fill="#e3c26a" />
+            <ellipse cx="120" cy="76" rx="8" ry="10" fill="#e3c26a" />
+            <ellipse cx="80" cy="77" rx="2.5" ry="8" fill="#1b1410" />
+            <ellipse cx="120" cy="77" rx="2.5" ry="8" fill="#1b1410" />
+          </g>
+          <g className="cat__eyes-closed" stroke="#1b1410" strokeWidth="3" fill="none" strokeLinecap="round">
+            <path d="M71,78 Q80,85 89,78" />
+            <path d="M111,78 Q120,85 129,78" />
+          </g>
+          <path d="M96,94 L104,94 L100,99 Z" fill="#d79a8a" />
+          <path d="M100,99 Q94,106 88,102 M100,99 Q106,106 112,102" stroke="#1b1410" strokeWidth="2" fill="none" strokeLinecap="round" />
+        </g>
+        <text x="150" y="40" className="cat__zzz">z</text>
+        <text x="164" y="24" className="cat__zzz cat__zzz--2">z</text>
+      </svg>
+      <Clock clock={clock} label={label} />
+    </div>
+  );
+}
+
 export function Companion({ id, ...props }: CompanionProps & { id: CompanionId }) {
   if (id === 'candle') return <Candle {...props} />;
   if (id === 'plant') return <Plant {...props} />;
+  if (id === 'hourglass') return <Hourglass {...props} />;
+  if (id === 'moon') return <Moon {...props} />;
+  if (id === 'cat') return <Cat {...props} />;
   return <TimerRing {...props} />;
 }

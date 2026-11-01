@@ -19,9 +19,19 @@ export interface AudioState {
   ambienceOn: boolean;
   /** True when the visible YouTube player should be shown. */
   streaming: boolean;
+  /** The visible player card is collapsed to a slim bar. */
+  playerMin: boolean;
 }
 
-let state: AudioState = { musicOn: false, musicStatus: 'idle', musicTitle: '', musicMessage: '', ambienceOn: false, streaming: false };
+let state: AudioState = {
+  musicOn: false,
+  musicStatus: 'idle',
+  musicTitle: '',
+  musicMessage: '',
+  ambienceOn: false,
+  streaming: false,
+  playerMin: typeof window !== 'undefined' && window.matchMedia('(max-width: 860px)').matches,
+};
 const listeners = new Set<() => void>();
 const set = (patch: Partial<AudioState>) => {
   state = { ...state, ...patch };
@@ -32,6 +42,11 @@ const subscribe = (l: () => void) => {
   return () => void listeners.delete(l);
 };
 export const useAudio = () => useSyncExternalStore(subscribe, () => state);
+
+/** Whether the YouTube card is on screen at all, and whether it's showing the full video. */
+export const playerVisible = (a: AudioState) => a.streaming && (a.musicOn || a.musicStatus === 'blocked' || a.musicStatus === 'error');
+export const playerExpanded = (a: AudioState) => playerVisible(a) && !a.playerMin;
+export const setPlayerMin = (playerMin: boolean) => set({ playerMin });
 
 const youtube = new YouTubeChannel((status, text) => {
   if (status === 'error') set({ musicStatus: status, musicMessage: text, musicOn: false });

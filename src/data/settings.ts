@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   chime: true,
   notifications: false,
   lightsOffFullscreen: true,
+  decorOff: [],
   updatedAt: 0,
 };
 

@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
-import { Crown } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Crown, Gift } from 'lucide-react';
 import { ACHIEVEMENTS, achievementById, CATEGORIES, progressLabel, progressOf, unlockTimeline } from '../../domain/achievements';
+import { REWARDS, rewardsFor } from '../../domain/rewards';
+import { Segmented } from '../../ui';
+import { RewardsGallery } from '../rewards/RewardsGallery';
 import { HOUR_MILESTONES, milestoneProgress } from '../../domain/milestones';
 import { formatDate, formatHours, HOUR } from '../../domain/time';
 import { useSessions, useUnlocks } from '../../data/hooks';
@@ -16,6 +20,8 @@ export function AchievementsPage() {
   const { sessions, loading } = useSessions();
   const { unlocks } = useUnlocks();
   const { unlocked: earned, metrics } = useMemo(() => unlockTimeline(sessions), [sessions]);
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'rewards' ? 'rewards' : 'achievements';
 
   // Stored unlocks are permanent; freshly earned ones show immediately while they're being saved.
   const unlockedAt = useMemo(() => {
@@ -103,7 +109,19 @@ export function AchievementsPage() {
         </p>
       </section>
 
-      {CATEGORIES.map((c) => {
+      <Segmented
+        label="Show"
+        value={tab}
+        onChange={(v) => setParams(v === 'rewards' ? { tab: 'rewards' } : {}, { replace: true })}
+        options={[
+          { value: 'achievements', label: `Achievements · ${count}/${ACHIEVEMENTS.length}` },
+          { value: 'rewards', label: `Rewards · ${REWARDS.filter((r) => unlockedAt.has(r.requires)).length}/${REWARDS.length}` },
+        ]}
+      />
+
+      {tab === 'rewards' && <RewardsGallery unlockedAt={unlockedAt} metrics={metrics} />}
+
+      {tab === 'achievements' && CATEGORIES.map((c) => {
         const items = ACHIEVEMENTS.filter((a) => a.category === c.id);
         const done = items.filter((a) => unlockedAt.has(a.id)).length;
         return (
@@ -128,6 +146,11 @@ export function AchievementsPage() {
                     <div className="ach-card__body">
                       <span className="ach-card__name">{a.name}</span>
                       <span className="ach-card__desc">{a.description}</span>
+                      {rewardsFor(a.id).length > 0 && (
+                        <span className="ach-card__reward">
+                          <Gift size={12} /> {isUnlocked ? 'Unlocked' : 'Unlocks'} {rewardsFor(a.id).map((r) => r.name).join(', ')}
+                        </span>
+                      )}
                       <div className="ach-card__meta">
                         {isUnlocked ? (
                           <>
@@ -152,7 +175,7 @@ export function AchievementsPage() {
         );
       })}
 
-      <section className="card">
+      {tab === 'achievements' && <section className="card">
         <div className="card__head">
           <h2>Unlock history</h2>
           <span className="faint small">{history.length} unlocked</span>
@@ -176,7 +199,7 @@ export function AchievementsPage() {
         ) : (
           <p className="empty">Your first achievement unlocks after your first focused minute. The Lock-In Room is waiting.</p>
         )}
-      </section>
+      </section>}
     </div>
   );
 }

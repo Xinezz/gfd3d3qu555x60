@@ -7,6 +7,8 @@ export interface Environment {
   sound: RecipeId;
   /** Ambient light colour the room UI picks up. */
   glow: string;
+  /** Reward that unlocks it; omitted = always available. */
+  reward?: string;
 }
 
 export const ENVIRONMENTS: Environment[] = [
@@ -20,6 +22,10 @@ export const ENVIRONMENTS: Environment[] = [
   { id: 'cafe', name: 'Café', blurb: 'Murmur, cups, warm lights', sound: 'cafe', glow: '#d79a66' },
   { id: 'snowy-window', name: 'Snowy Window', blurb: 'Falling snow, wind outside', sound: 'snow', glow: '#a9bfd6' },
   { id: 'japanese-garden', name: 'Japanese Garden', blurb: 'Stream, lantern, temple bell', sound: 'garden', glow: '#d48a8a' },
+  { id: 'mountain-lake', name: 'Mountain Lake', blurb: 'Dawn over still water', sound: 'nature', glow: '#e0a07e', reward: 'env-mountain-lake' },
+  { id: 'aurora', name: 'Aurora Night', blurb: 'Northern lights over snow', sound: 'snow', glow: '#4fd6a8', reward: 'env-aurora' },
+  { id: 'desert', name: 'Desert Night', blurb: 'Moonlit dunes, endless stars', sound: 'desert', glow: '#a48ac0', reward: 'env-desert' },
+  { id: 'starfield', name: 'Starfield', blurb: 'Drifting through deep space', sound: 'space', glow: '#9b7cf0', reward: 'env-starfield' },
 ];
 
 export const environmentById = (id: string) => ENVIRONMENTS.find((e) => e.id === id) ?? ENVIRONMENTS[0];

@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Clock, Flame, Moon, Music, NotebookPen, Pause, Play, RotateCcw, Square, Sun, Trees, Volume2 } from 'lucide-react';
+import { Clock, Flame, Lamp, Moon, Music, NotebookPen, Pause, Play, RotateCcw, Square, Sun, Trees, Volume2 } from 'lucide-react';
 import * as T from '../../domain/timer';
 import { formatClock, formatDuration } from '../../domain/time';
 import { todayStats, totalFocusMs } from '../../domain/stats';
 import { useSessions, useSubjects } from '../../data/hooks';
 import { useSettings } from '../../data/settings';
 import { confirmDialog, lightsOffStore, toast, useNow } from '../../ui';
-import { audio, useAudio } from '../audio/audioStore';
+import { audio, playerExpanded, useAudio } from '../audio/audioStore';
 import { Companion } from '../companions/Companions';
 import { Scene } from '../scenes/Scene';
+import { DecorLayer } from '../rewards/Decor';
+import { useRewards } from '../rewards/useRewards';
+import { COMPANIONS } from '../companions/Companions';
 import { environmentById } from '../scenes/catalog';
 import { onSessionEvent, room, useRoom } from '../session/sessionStore';
-import { CompanionPanel, MusicPanel, Panel, ScenePanel, ThoughtsPanel, TimerPanel, type PanelId } from './panels';
+import { CompanionPanel, DecorPanel, MusicPanel, Panel, ScenePanel, ThoughtsPanel, TimerPanel, type PanelId } from './panels';
 import { SubjectPicker } from './SubjectPicker';
 import './room.css';
 
@@ -21,6 +24,7 @@ const PANELS: { id: PanelId; label: string; icon: typeof Clock }[] = [
   { id: 'music', label: 'Music', icon: Music },
   { id: 'scene', label: 'Scene', icon: Trees },
   { id: 'companion', label: 'Companion', icon: Flame },
+  { id: 'decor', label: 'Decor', icon: Lamp },
   { id: 'thoughts', label: 'Thoughts', icon: NotebookPen },
 ];
 
@@ -51,6 +55,7 @@ export function Room() {
   const subjects = useSubjects();
   const { sessions } = useSessions();
   const lightsOff = lightsOffStore.use();
+  const rewards = useRewards();
   const sound = useAudio();
   const [params, setParams] = useSearchParams();
   const [panel, setPanelState] = useState<PanelId | null>((params.get('panel') as PanelId) || null);
@@ -176,7 +181,11 @@ export function Room() {
   });
 
   const label = timer.status === 'paused' ? 'Paused' : isBreak ? 'Break' : timer.status === 'running' ? 'Focus' : 'Ready';
-  const env = environmentById(settings.environmentId);
+  // A locked pick (e.g. restored from another device's backup) falls back to the defaults.
+  const envUnlocked = !rewards.ready || rewards.isUnlocked(environmentById(settings.environmentId).reward);
+  const env = environmentById(envUnlocked ? settings.environmentId : 'rainy-window');
+  const companionReward = COMPANIONS.find((c) => c.id === settings.companionId)?.reward;
+  const companionId = !rewards.ready || rewards.isUnlocked(companionReward) ? settings.companionId : 'timer';
 
   const controls = (
     <div className="room__controls">
@@ -205,7 +214,8 @@ export function Room() {
 
   return (
     <div className={`room ${lightsOff ? 'is-dark' : ''} ${lightsOff && !awake ? 'is-asleep' : ''} ${panel ? 'has-panel' : ''}`} style={{ ['--env-glow' as string]: env.glow }}>
-      <Scene id={settings.environmentId} dim={lightsOff ? 0.12 : 0.38} />
+      <Scene id={env.id} dim={lightsOff ? 0.12 : 0.38} />
+      <DecorLayer active={rewards.activeDecor} dark={lightsOff} makeRoomForPlayer={!lightsOff && playerExpanded(sound)} />
 
       <header className="room__top">
         <div>
@@ -229,7 +239,7 @@ export function Room() {
           </p>
         )}
         <Companion
-          id={settings.companionId}
+          id={companionId}
           progress={T.progress(timer, now)}
           clock={formatClock(remaining)}
           label={label}
@@ -291,6 +301,7 @@ export function Room() {
           {panel === 'music' && <MusicPanel />}
           {panel === 'scene' && <ScenePanel />}
           {panel === 'companion' && <CompanionPanel />}
+          {panel === 'decor' && <DecorPanel />}
           {panel === 'thoughts' && <ThoughtsPanel />}
         </Panel>
       )}

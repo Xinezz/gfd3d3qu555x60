@@ -247,3 +247,13 @@ kbd { font-family: var(--font-body); font-size: 0.7rem; padding: 1px 6px; border
   .dock-btn span { display: none; }
   .dock-btn { padding: 10px 8px; }
 }
+
+/* Locked rewards: visible, clearly unavailable, and say how to earn them. */
+.env.is-locked, .option.is-locked { cursor: default; }
+.env.is-locked .env__swatch { filter: grayscale(1) brightness(0.55); display: grid; place-items: center; color: var(--text-2); }
+.env.is-locked .option__name, .option.is-locked .option__name { color: var(--text-3); }
+.option.is-locked { color: var(--text-3); }
+.env.is-locked:hover, .option.is-locked:hover { background: rgb(239 230 216 / 0.03); }
+.decor-locked { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; color: var(--text-3); }
+.decor-locked > span { display: flex; flex-direction: column; }
+.decor-locked .option__name { color: var(--text-3); }

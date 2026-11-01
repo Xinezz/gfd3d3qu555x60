@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Gift } from 'lucide-react';
 import { achievementById, CATEGORIES, unlockTimeline, type Achievement } from '../../domain/achievements';
+import { rewardsFor } from '../../domain/rewards';
 import type { AchievementUnlock } from '../../domain/types';
 import { formatDate, formatTimeOfDay } from '../../domain/time';
 import { useSessions, useUnlocks } from '../../data/hooks';
@@ -58,6 +60,28 @@ export function AchievementCenter() {
   return <Unlocked key={queue[0].id} unlock={queue[0]} remaining={queue.length - 1} aboveReview={!!reviewId} />;
 }
 
+const KIND_LABEL = { decor: 'decoration', environment: 'environment', companion: 'companion' } as const;
+
+/** "Reward unlocked: Steaming Mug (decoration)" — what these achievements just earned you. */
+function RewardLine({ achievementIds }: { achievementIds: string[] }) {
+  const rewards = achievementIds.flatMap(rewardsFor);
+  if (!rewards.length) return null;
+  const shown = rewards.slice(0, 4);
+  return (
+    <div className="celebration__rewards">
+      <span className="eyebrow">{rewards.length === 1 ? 'Reward unlocked' : `${rewards.length} rewards unlocked`}</span>
+      <div>
+        {shown.map((r) => (
+          <span key={r.id} className="chip">
+            <Gift size={12} /> {r.name} <span className="faint">· {KIND_LABEL[r.kind]}</span>
+          </span>
+        ))}
+        {rewards.length > shown.length && <span className="chip">+{rewards.length - shown.length} more</span>}
+      </div>
+    </div>
+  );
+}
+
 const markSeen = (ids: string[]) => Promise.all(ids.map((id) => unlocksRepo.patch(id, { seenAt: Date.now() })));
 
 function Sparks({ count = 18 }: { count?: number }) {
@@ -100,6 +124,7 @@ function Unlocked({ unlock, remaining, aboveReview }: { unlock: AchievementUnloc
           {a.name}
         </h2>
         <p className="celebration__desc">{a.description}</p>
+        <RewardLine achievementIds={[a.id]} />
         <p className="faint small">
           {TIER_LABEL[a.tier]} · {category.name} · {formatDate(unlock.unlockedAt, { day: 'numeric', month: 'long', year: 'numeric' })}, {formatTimeOfDay(unlock.unlockedAt)}
         </p>
@@ -136,6 +161,7 @@ function Summary({ queue }: { queue: AchievementUnlock[] }) {
           {queue.length} achievements earned
         </h2>
         <p className="celebration__desc">Every one of these came from hours you actually put in.</p>
+        <RewardLine achievementIds={queue.map((u) => u.id)} />
         <ul className="celebration__list">
           {list.map(({ u, a }, i) => (
             <li key={u.id} style={{ animationDelay: `${0.15 + i * 0.06}s` }}>

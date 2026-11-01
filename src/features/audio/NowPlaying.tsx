@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, Pause, Play } from 'lucide-react';
-import { attachPlayerHost, audio, useAudio } from './audioStore';
+import { attachPlayerHost, audio, playerVisible, setPlayerMin, useAudio } from './audioStore';
 import { lightsOffStore } from '../../ui';
 import './audio.css';
 
@@ -13,13 +13,13 @@ export function NowPlaying() {
   const host = useRef<HTMLDivElement>(null);
   const a = useAudio();
   const lightsOff = lightsOffStore.use();
-  const [min, setMin] = useState(() => window.matchMedia('(max-width: 860px)').matches);
+  const min = a.playerMin;
 
   useEffect(() => {
     if (host.current) attachPlayerHost(host.current);
   }, []);
 
-  const visible = a.streaming && (a.musicOn || a.musicStatus === 'blocked' || a.musicStatus === 'error');
+  const visible = playerVisible(a);
   const collapsed = min || lightsOff;
   const status =
     a.musicStatus === 'loading' ? 'Connecting…' : a.musicStatus === 'blocked' || a.musicStatus === 'error' ? a.musicMessage : a.musicOn ? 'Now playing' : 'Paused';
@@ -38,7 +38,7 @@ export function NowPlaying() {
           <span className="now-playing__title">{a.musicTitle || 'YouTube stream'}</span>
         </div>
         {!lightsOff && (
-          <button className="icon-btn icon-btn--ghost" onClick={() => setMin(!min)} aria-label={min ? 'Show player' : 'Minimise player'}>
+          <button className="icon-btn icon-btn--ghost" onClick={() => setPlayerMin(!min)} aria-label={min ? 'Show player' : 'Minimise player'}>
             {min ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
         )}

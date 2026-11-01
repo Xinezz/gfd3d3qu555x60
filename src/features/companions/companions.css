@@ -57,6 +57,38 @@
 .plant__new-leaf { transition: transform 1s ease; }
 .plant__caption { margin: 6px 0 0; font-size: 0.78rem; color: var(--text-3); text-align: center; }
 
+/* Hourglass */
+.companion--hourglass svg { width: calc(var(--size) * 0.5); height: calc(var(--size) * 0.94); filter: drop-shadow(0 10px 30px rgb(0 0 0 / 0.45)); }
+.companion--hourglass .companion__time { font-size: calc(var(--size) * 0.17); }
+.hg__stream { stroke-dasharray: 3 5; animation: sand-fall 0.6s linear infinite; }
+@keyframes sand-fall { to { stroke-dashoffset: -8; } }
+
+/* Moon */
+.companion--moon svg { width: calc(var(--size) * 0.82); height: calc(var(--size) * 0.82); }
+.companion--moon .companion__time { font-size: calc(var(--size) * 0.17); }
+.moon__halo { transition: opacity 1s; }
+.companion--moon.is-running .moon__halo { animation: candle-glow 6s ease-in-out infinite; }
+
+/* Cat */
+.companion--cat svg { width: calc(var(--size) * 0.72); height: calc(var(--size) * 0.8); }
+.companion--cat .companion__time { font-size: calc(var(--size) * 0.17); }
+.cat__body, .cat__head { transform-box: fill-box; transform-origin: 50% 100%; }
+.companion--cat.is-running .cat__body { animation: cmp-cat-breathe 4.5s ease-in-out infinite; }
+.companion--cat.is-running .cat__head { transform: translateY(14px) rotate(-6deg); transition: transform 1.2s var(--ease); }
+.cat__head { transition: transform 1.2s var(--ease); }
+.cat__tail { transform-box: fill-box; transform-origin: 0% 100%; animation: cmp-tail 7s ease-in-out infinite; }
+.companion--cat .cat__eyes-closed, .companion--cat .cat__zzz { opacity: 0; transition: opacity 0.6s; }
+.companion--cat.is-running .cat__eyes-closed { opacity: 1; }
+.companion--cat.is-running .cat__eyes-open { opacity: 0; }
+.companion--cat.is-running .cat__zzz { animation: cmp-zzz 4s ease-in-out infinite; }
+.companion--cat.is-running .cat__zzz--2 { animation-delay: 2s; }
+.cat__zzz { font: italic 600 18px var(--font-display); fill: rgb(240 230 215 / 0.55); }
+.companion--cat.is-awake .cat__eyes-open { animation: blink 6s infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes blink { 0%, 96%, 100% { transform: scaleY(1); } 98% { transform: scaleY(0.1); } }
+@keyframes cmp-cat-breathe { 50% { transform: scale(1.03, 1.05); } }
+@keyframes cmp-tail { 50% { transform: rotate(-8deg); } }
+@keyframes cmp-zzz { 0% { opacity: 0; transform: translate(0, 6px); } 50% { opacity: 1; } 100% { opacity: 0; transform: translate(8px, -10px); } }
+
 @media (prefers-reduced-motion: reduce) {
   .companion * { animation: none !important; }
 }
