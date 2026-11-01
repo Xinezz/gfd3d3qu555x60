@@ -18,10 +18,28 @@ export function SettingsPage() {
   const s = useSettings();
   return (
     <div className="page settings">
-      <header>
-        <p className="eyebrow">Preferences</p>
-        <h1>Settings</h1>
+      <header className="page-head">
+        <div>
+          <p className="eyebrow">Preferences</p>
+          <h1>Settings</h1>
+          <p className="muted">Make the sanctuary yours. Changes save instantly.</p>
+        </div>
       </header>
+
+      <section className="card">
+        <h2>You</h2>
+        <label className="field settings__name">
+          <span>Your name</span>
+          <input
+            className="input"
+            placeholder="Shown in your dashboard greeting (optional)"
+            maxLength={40}
+            defaultValue={s.displayName}
+            onBlur={(e) => updateSettings({ displayName: e.target.value.trim() })}
+            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+          />
+        </label>
+      </section>
 
       <AccountSection />
 

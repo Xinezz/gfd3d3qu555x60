@@ -1,22 +1,25 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Flame, Play, SlidersHorizontal, Target } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Play, SlidersHorizontal } from 'lucide-react';
 import type { Note, Session, Subject } from '../../domain/types';
 import { filterNotes } from '../../domain/notes';
 import { BUILT_IN_PRESETS } from '../../domain/presets';
-import { currentWeekDays, monthFocusMs, recentSessions, streaks, todayStats, totalFocusMs, weekFocusMs } from '../../domain/stats';
-import { milestoneProgress } from '../../domain/milestones';
+import { currentWeekDays, monthFocusMs, recentSessions, streaks, todayStats, weekFocusMs } from '../../domain/stats';
+import { ACHIEVEMENTS, progressLabel, progressOf, unlockTimeline } from '../../domain/achievements';
 import { formatClock, formatDuration, formatHours, formatTimeOfDay, MINUTE, relativeDay } from '../../domain/time';
 import { remainingMs } from '../../domain/timer';
-import { useAllSubjects, useNotes, useSessions } from '../../data/hooks';
+import { useAllSubjects, useNotes, useSessions, useUnlocks } from '../../data/hooks';
 import { sessionsRepo } from '../../data/repo';
 import { updateSettings, useSettings } from '../../data/settings';
 import { useNow } from '../../ui';
+import { Pixel } from '../../ui/Pixel';
+import { Badge } from '../achievements/Badge';
+import { environmentById } from '../scenes/catalog';
 import { room, useRoom } from '../session/sessionStore';
 import './dashboard.css';
 
 function greeting(h: number) {
-  if (h < 5) return 'Burning the midnight oil';
+  if (h < 5) return 'Still up';
   if (h < 12) return 'Good morning';
   if (h < 18) return 'Good afternoon';
   return 'Good evening';
@@ -31,273 +34,330 @@ export function Dashboard() {
 
   const stats = useMemo(() => {
     const today = todayStats(sessions, now);
+    const { metrics } = unlockTimeline(sessions);
     return {
       today,
       streak: streaks(sessions, now),
       week: weekFocusMs(sessions, now),
       month: monthFocusMs(sessions, now),
-      total: totalFocusMs(sessions),
+      metrics,
       days: currentWeekDays(sessions, now),
-      recent: recentSessions(sessions, 5),
+      recent: recentSessions(sessions, 6),
     };
   }, [sessions, now]);
 
   const goalMs = settings.dailyGoalMin * MINUTE;
   const line =
     stats.today.focusMs >= goalMs
-      ? 'Daily goal reached. Anything more is a bonus.'
+      ? "Today's goal is met. Anything more is a quiet bonus."
       : stats.today.count > 0
-        ? 'Good momentum today. Keep the rhythm going.'
+        ? `${formatDuration(goalMs - stats.today.focusMs)} to go today. Keep the rhythm.`
         : stats.streak.current > 0
-          ? `Keep your ${stats.streak.current}-day streak alive today.`
-          : 'A quiet room is waiting for you.';
+          ? `Your ${stats.streak.current}-day streak is waiting for today's session.`
+          : 'The room is quiet and ready when you are.';
+  const name = settings.displayName.trim();
 
   return (
-    <div className="page dashboard">
-      <header className="dash-hero">
-        <div>
+    <div className={`page dash ${loading ? 'is-loading' : ''}`}>
+      <section className="dash-hero">
+        <div className="dash-hero__intro">
           <p className="eyebrow">{new Date(now).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-          <h1>{greeting(new Date(now).getHours())}</h1>
-          <p className="muted">{line}</p>
+          <h1 className="t-display">
+            {greeting(new Date(now).getHours())}
+            {name ? (
+              <>
+                , <em>{name}</em>
+              </>
+            ) : null}
+            .
+          </h1>
+          <p className="dash-hero__line">{line}</p>
+          <StartArea />
         </div>
-        <LiveOrEnter />
-      </header>
+        <TodayDial focusMs={stats.today.focusMs} goalMs={goalMs} count={stats.today.count} />
+      </section>
 
-      <div className={`dash-grid ${loading ? 'is-loading' : ''}`}>
-        <TodayCard focusMs={stats.today.focusMs} count={stats.today.count} goalMs={goalMs} streak={stats.streak} />
-        <QuickStart />
-        <ProgressCard week={stats.week} month={stats.month} total={stats.total} days={stats.days} goalMs={goalMs} />
-        <RecentCard sessions={stats.recent} subjects={subjects} />
-        <ContinueCard notes={notes} subjects={subjects} />
-        <ParkedThoughts sessions={sessions} />
+      <section className="dash-strip" aria-label="Your numbers">
+        <div className="dash-stat dash-stat--streak">
+          <Pixel name="flame" scale={3} mono={stats.streak.current ? undefined : '#3a2f27'} />
+          <div>
+            <span className="eyebrow">Streak</span>
+            <span className="t-stat">
+              {stats.streak.current}
+              <small>{stats.streak.current === 1 ? 'day' : 'days'}</small>
+            </span>
+            <span className="faint xsmall">Best {stats.streak.best}</span>
+          </div>
+        </div>
+        <Stat label="This week" value={formatDuration(stats.week)} />
+        <Stat label="This month" value={formatDuration(stats.month)} />
+        <Stat label="Lifetime" value={formatHours(stats.metrics.focusMs)} unit="h" sub={`${stats.metrics.completedSessions} full sessions`} />
+      </section>
+
+      <div className="dash-row">
+        <WeekChart days={stats.days} goalMs={goalMs} total={stats.week} />
+        <NextAchievement sessions={sessions} />
+      </div>
+
+      <div className="dash-row dash-row--wide">
+        <Recent sessions={stats.recent} subjects={subjects} />
+        <div className="dash-side">
+          <ContinueNotes notes={notes} subjects={subjects} />
+          <ParkedThoughts sessions={sessions} />
+        </div>
       </div>
     </div>
   );
 }
 
-function LiveOrEnter() {
-  const { timer } = useRoom();
-  useNow(timer.status === 'running', 1000);
-  if (timer.status === 'idle')
-    return (
-      <Link to="/room" className="btn btn--primary btn--lg">
-        Enter the Lock-In Room <ArrowRight size={18} />
-      </Link>
-    );
+function Stat({ label, value, unit, sub }: { label: string; value: string; unit?: string; sub?: string }) {
   return (
-    <Link to="/room" className="dash-live">
-      <span className={`live-pill__dot ${timer.status === 'paused' ? 'is-paused' : ''}`} />
-      <span className="dash-live__time num">{formatClock(remainingMs(timer, Date.now()))}</span>
-      <span className="faint small">{timer.status === 'paused' ? 'Paused' : timer.phase === 'focus' ? 'Focusing' : 'On break'} · return to room</span>
-    </Link>
-  );
-}
-
-function GoalRing({ ratio }: { ratio: number }) {
-  const r = 54;
-  const c = 2 * Math.PI * r;
-  const done = ratio >= 1;
-  return (
-    <svg viewBox="0 0 132 132" className={`goal-ring ${done ? 'is-done' : ''}`} aria-hidden>
-      <circle cx="66" cy="66" r={r} className="goal-ring__track" />
-      <circle cx="66" cy="66" r={r} className="goal-ring__fill" strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(1, ratio))} transform="rotate(-90 66 66)" />
-    </svg>
-  );
-}
-
-function TodayCard({ focusMs, count, goalMs, streak }: { focusMs: number; count: number; goalMs: number; streak: { current: number; best: number } }) {
-  const ratio = goalMs ? focusMs / goalMs : 0;
-  const left = goalMs - focusMs;
-  return (
-    <section className="card today-card">
-      <div className="card__head">
-        <h2>Today</h2>
-        <Link to="/settings" className="small faint">
-          Goal {formatDuration(goalMs)}
-        </Link>
+    <div className="dash-stat">
+      <div>
+        <span className="eyebrow">{label}</span>
+        <span className="t-stat">
+          {value}
+          {unit && <small>{unit}</small>}
+        </span>
+        {sub && <span className="faint xsmall">{sub}</span>}
       </div>
-      <div className="today-card__body">
-        <div className="today-card__ring">
-          <GoalRing ratio={ratio} />
-          <div className="today-card__ring-text">
-            <span className="today-card__time num">{formatDuration(focusMs)}</span>
-            <span className="faint small">{Math.round(Math.min(ratio, 9.99) * 100)}% of goal</span>
-          </div>
-        </div>
-        <dl className="today-card__stats">
-          <div>
-            <dt><Target size={15} /> Sessions</dt>
-            <dd className="num">{count}</dd>
-          </div>
-          <div>
-            <dt><Flame size={15} /> Streak</dt>
-            <dd className="num">
-              {streak.current} {streak.current === 1 ? 'day' : 'days'}
-              <small className="faint"> · best {streak.best}</small>
-            </dd>
-          </div>
-          <div>
-            <dt>Goal</dt>
-            <dd>{left > 0 ? `${formatDuration(left)} to go` : 'Reached ✓'}</dd>
-          </div>
-        </dl>
-      </div>
-    </section>
+    </div>
   );
 }
 
-function QuickStart() {
+/** The primary call to action: start (or return to) a session. */
+function StartArea() {
   const navigate = useNavigate();
   const { timer } = useRoom();
-  const busy = timer.status !== 'idle';
-  const go = (focusMin: number, breakMin: number, presetId: string) => {
+  const settings = useSettings();
+  useNow(timer.status === 'running', 1000);
+  const env = environmentById(settings.environmentId);
+
+  if (timer.status !== 'idle')
+    return (
+      <Link to="/room" className="dash-live">
+        <span className={`live-pill__dot ${timer.status === 'paused' ? 'is-paused' : ''}`} />
+        <span className="dash-live__time num">{formatClock(remainingMs(timer, Date.now()))}</span>
+        <span className="dash-live__label">
+          {timer.status === 'paused' ? 'Paused' : timer.phase === 'focus' ? 'Focusing' : 'On break'}
+          <span className="faint"> · return to the room</span>
+        </span>
+        <ArrowRight size={18} />
+      </Link>
+    );
+
+  const go = (focusMin: number, breakMin: number, presetId: string | null) => {
     updateSettings({ focusMin, breakMin, presetId });
     room.configure(focusMin, breakMin);
     room.start();
     navigate('/room');
   };
+
   return (
-    <section className="card quick-card">
-      <div className="card__head">
-        <h2>Quick start</h2>
-        {busy && <span className="small faint">A session is in progress</span>}
-      </div>
-      <div className="quick-grid">
+    <div className="dash-start">
+      <button className="dash-start__main" onClick={() => go(settings.focusMin, settings.breakMin, settings.presetId)}>
+        <span className="dash-start__icon">
+          <Play size={18} fill="currentColor" />
+        </span>
+        <span className="dash-start__text">
+          <strong>Start Lock-In</strong>
+          <span>
+            {settings.focusMin} min · {env.name}
+          </span>
+        </span>
+      </button>
+      <div className="dash-start__quick" role="group" aria-label="Quick start">
         {BUILT_IN_PRESETS.map((p) => (
-          <button key={p.id} className="quick" disabled={busy} onClick={() => go(p.focusMin, p.breakMin, p.id)}>
-            <span className="quick__min num">{p.focusMin}</span>
-            <span className="quick__unit">min focus</span>
-            <span className="quick__sub">
-              {p.breakMin} min break <Play size={12} />
-            </span>
+          <button key={p.id} className="dash-quick" onClick={() => go(p.focusMin, p.breakMin, p.id)} title={`${p.focusMin} min focus, ${p.breakMin} min break`}>
+            <span className="num">{p.focusMin}</span>
+            <span>min</span>
           </button>
         ))}
-        <Link to="/room?panel=timer" className="quick quick--custom">
-          <SlidersHorizontal size={22} strokeWidth={1.6} />
-          <span className="quick__unit">Custom</span>
-          <span className="quick__sub">Your own length</span>
+        <Link to="/room?panel=timer" className="dash-quick" title="Choose your own length">
+          <SlidersHorizontal size={15} />
+        </Link>
+        <Link to="/room" className="link dash-start__enter">
+          Enter the room
         </Link>
       </div>
-    </section>
+    </div>
   );
 }
 
-function ProgressCard({ week, month, total, days, goalMs }: { week: number; month: number; total: number; days: ReturnType<typeof currentWeekDays>; goalMs: number }) {
-  const max = Math.max(goalMs, ...days.map((d) => d.focusMs), 1);
-  const m = milestoneProgress(total);
+/** Today's progress toward the daily goal, drawn as a dial with minute ticks. */
+function TodayDial({ focusMs, goalMs, count }: { focusMs: number; goalMs: number; count: number }) {
+  const ratio = goalMs ? Math.min(1, focusMs / goalMs) : 0;
+  const done = focusMs >= goalMs && goalMs > 0;
+  const r = 84;
+  const c = 2 * Math.PI * r;
+  const h = Math.floor(focusMs / 3_600_000);
+  const m = Math.floor((focusMs % 3_600_000) / 60_000);
   return (
-    <section className="card progress-card">
-      <div className="card__head">
-        <h2>Progress</h2>
+    <div className={`dial ${done ? 'is-done' : ''}`} role="img" aria-label={`Today: ${formatDuration(focusMs)} of a ${formatDuration(goalMs)} goal`}>
+      <svg viewBox="0 0 220 220" aria-hidden>
+        {Array.from({ length: 60 }, (_, i) => {
+          const a = (i / 60) * Math.PI * 2 - Math.PI / 2;
+          const major = i % 5 === 0;
+          const r1 = major ? 100 : 102;
+          return <line key={i} x1={110 + r1 * Math.cos(a)} y1={110 + r1 * Math.sin(a)} x2={110 + 106 * Math.cos(a)} y2={110 + 106 * Math.sin(a)} className={`dial__tick ${i / 60 < ratio ? 'is-lit' : ''} ${major ? 'is-major' : ''}`} />;
+        })}
+        <circle cx="110" cy="110" r={r} className="dial__track" />
+        <circle cx="110" cy="110" r={r} className="dial__fill" strokeDasharray={c} strokeDashoffset={c * (1 - ratio)} transform="rotate(-90 110 110)" />
+      </svg>
+      <div className="dial__center">
+        <span className="eyebrow">Today</span>
+        <span className="dial__time num">
+          {h}
+          <small>h</small> {String(m).padStart(2, '0')}
+          <small>m</small>
+        </span>
+        <span className="dial__goal">{done ? 'Goal reached' : `of ${formatDuration(goalMs)} goal`}</span>
+        <span className="faint xsmall">
+          {count} {count === 1 ? 'session' : 'sessions'}
+        </span>
       </div>
-      <div className="progress-card__totals">
+    </div>
+  );
+}
+
+function WeekChart({ days, goalMs, total }: { days: ReturnType<typeof currentWeekDays>; goalMs: number; total: number }) {
+  const max = Math.max(goalMs, ...days.map((d) => d.focusMs), 1);
+  return (
+    <section className="card dash-week">
+      <div className="card__head">
         <div>
           <span className="eyebrow">This week</span>
-          <strong className="num">{formatDuration(week)}</strong>
+          <h2>Weekly rhythm</h2>
         </div>
-        <div>
-          <span className="eyebrow">This month</span>
-          <strong className="num">{formatDuration(month)}</strong>
-        </div>
-        <div>
-          <span className="eyebrow">All time</span>
-          <strong className="num">{formatHours(total)}h</strong>
-        </div>
+        <span className="num muted">{formatDuration(total)}</span>
       </div>
-      <div className="week-bars" role="img" aria-label="Focus time per day this week">
-        <i className="week-bars__goal" style={{ bottom: `calc(22px + (100% - 22px) * ${goalMs / max})` }} title="Daily goal" />
+      <div className="week" role="img" aria-label="Focus time per day this week">
+        <span className="week__goal" style={{ bottom: `calc(26px + (100% - 26px) * ${goalMs / max})` }}>
+          <em>goal</em>
+        </span>
         {days.map((d) => (
-          <div key={d.key} className={`week-bars__day ${d.isToday ? 'is-today' : ''}`} title={`${formatDuration(d.focusMs)}`}>
-            <div className="week-bars__track">
+          <div key={d.key} className={`week__day ${d.isToday ? 'is-today' : ''} ${d.isFuture ? 'is-future' : ''}`} title={`${new Date(d.t).toLocaleDateString(undefined, { weekday: 'long' })}: ${formatDuration(d.focusMs)}`}>
+            <span className="week__val num">{d.focusMs ? formatDuration(d.focusMs) : ''}</span>
+            <div className="week__track">
               <span style={{ height: `${(d.focusMs / max) * 100}%` }} />
             </div>
-            <small>{new Date(d.t).toLocaleDateString(undefined, { weekday: 'narrow' })}</small>
+            <small>{new Date(d.t).toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 2)}</small>
           </div>
         ))}
       </div>
-      <div className="milestone">
-        {m.next ? (
-          <>
-            <div className="milestone__row">
-              <span>
-                <span className="faint small">Next milestone · </span>
-                <Link to="/achievements">{m.next.name}</Link>
-              </span>
-              <span className="small faint num">
-                {formatHours(total)} / {formatHours(m.next.thresholdMs)}h
-              </span>
-            </div>
-            <div className="progress-bar">
-              <i style={{ width: `${m.ratio * 100}%` }} />
-            </div>
-          </>
-        ) : (
-          <p>All hour milestones reached. 1,000 hours. Extraordinary.</p>
-        )}
-      </div>
     </section>
   );
 }
 
-function RecentCard({ sessions, subjects }: { sessions: Session[]; subjects: Subject[] }) {
+/** The locked achievement you're closest to, with how far there is to go. */
+function NextAchievement({ sessions }: { sessions: Session[] }) {
+  const { unlocks } = useUnlocks();
+  const pick = useMemo(() => {
+    const { unlocked, metrics } = unlockTimeline(sessions);
+    const have = new Set([...unlocks.map((u) => u.id), ...unlocked.keys()]);
+    const locked = ACHIEVEMENTS.filter((a) => !have.has(a.id));
+    if (!locked.length) return null;
+    const best = locked.reduce((b, a) => (progressOf(a, metrics).ratio > progressOf(b, metrics).ratio ? a : b), locked[0]);
+    return { a: best, p: progressOf(best, metrics), label: progressLabel(best, metrics) };
+  }, [sessions, unlocks]);
+
+  return (
+    <section className="dash-next">
+      <span className="eyebrow">Next achievement</span>
+      {pick ? (
+        <>
+          <div className="dash-next__body">
+            <Badge achievement={pick.a} unlocked={false} size={76} />
+            <div>
+              <h2>{pick.a.name}</h2>
+              <p className="muted small">{pick.a.description}</p>
+            </div>
+          </div>
+          <div className="dash-next__progress">
+            <div className="progress-bar">
+              <i style={{ width: `${pick.p.ratio * 100}%` }} />
+            </div>
+            <div className="dash-next__meta">
+              <span className="num">{pick.label}</span>
+              <span className="num faint">{Math.round(pick.p.ratio * 100)}%</span>
+            </div>
+          </div>
+          <Link to="/achievements" className="link small">
+            See the collection
+          </Link>
+        </>
+      ) : (
+        <p className="muted">Every achievement is unlocked. Remarkable.</p>
+      )}
+    </section>
+  );
+}
+
+function Recent({ sessions, subjects }: { sessions: Session[]; subjects: Subject[] }) {
   const byId = new Map(subjects.map((s) => [s.id, s]));
   return (
-    <section className="card recent-card">
-      <div className="card__head">
-        <h2>Recent activity</h2>
+    <section className="dash-recent">
+      <div className="section__head">
+        <div>
+          <span className="eyebrow">Recent</span>
+          <h2>Latest sessions</h2>
+        </div>
+        <Link to="/reports" className="link small">
+          All history
+        </Link>
       </div>
       {sessions.length === 0 ? (
-        <p className="empty">Your completed sessions will appear here. The first one is the hardest. Start small.</p>
+        <p className="empty">Your sessions will gather here. The first one is the hardest; make it a short one.</p>
       ) : (
-        <ul className="recent">
+        <ol className="timeline">
           {sessions.map((s) => {
             const subj = s.subjectId ? byId.get(s.subjectId) : undefined;
             return (
               <li key={s.id}>
-                <span className="dot" style={{ background: subj?.color ?? 'var(--text-3)' }} />
-                <div className="recent__main">
-                  <span className="recent__title">{subj?.name ?? 'No subject'}</span>
-                  <span className="recent__task faint small">{s.task || s.reflection?.accomplished || (s.status === 'ended_early' ? 'Finished early' : 'Focus session')}</span>
-                </div>
-                <div className="recent__meta">
-                  <span className="num">{formatDuration(s.focusMs)}</span>
-                  <span className="faint small">
-                    {relativeDay(s.startedAt)} · {formatTimeOfDay(s.startedAt)}
-                  </span>
-                </div>
+                <span className="timeline__when num">
+                  {relativeDay(s.startedAt)}
+                  <span>{formatTimeOfDay(s.startedAt)}</span>
+                </span>
+                <span className="timeline__dot" style={{ background: subj?.color ?? 'var(--text-3)' }} />
+                <span className="timeline__main">
+                  <strong>{subj?.name ?? 'No subject'}</strong>
+                  <span className="faint small">{s.task || s.reflection?.accomplished || (s.status === 'ended_early' ? 'Finished early' : 'Focus session')}</span>
+                </span>
+                <span className="timeline__dur num">{formatDuration(s.focusMs)}</span>
               </li>
             );
           })}
-        </ul>
+        </ol>
       )}
     </section>
   );
 }
 
 /** The latest in-progress topics, so you can see where you stopped before you start. */
-function ContinueCard({ notes, subjects }: { notes: Note[]; subjects: Subject[] }) {
+function ContinueNotes({ notes, subjects }: { notes: Note[]; subjects: Subject[] }) {
   const open = filterNotes(notes, { status: 'in_progress' }).slice(0, 3);
   if (!open.length) return null;
   const byId = new Map(subjects.map((s) => [s.id, s]));
   return (
-    <section className="card continue-card">
-      <div className="card__head">
-        <h2>Pick up where you left off</h2>
-        <Link to="/notes" className="small faint">
-          All notes
-        </Link>
+    <section className="dash-notes">
+      <div className="section__head">
+        <div>
+          <span className="eyebrow">Notebook</span>
+          <h2>Pick up where you left off</h2>
+        </div>
       </div>
-      <div className="continue">
+      <div className="dash-notes__list">
         {open.map((n) => {
           const subj = n.subjectId ? byId.get(n.subjectId) : undefined;
           return (
-            <Link key={n.id} to={`/notes?subject=${n.subjectId ?? 'none'}`} className="continue__item">
-              <span className="chip">
+            <Link key={n.id} to={`/notes?subject=${n.subjectId ?? 'none'}`} className="dash-note">
+              <span className="dash-note__subject">
                 <span className="dot" style={{ background: subj?.color ?? 'var(--text-3)' }} />
                 {subj?.name ?? 'No subject'}
               </span>
               <strong>{n.topic}</strong>
-              <span className="muted small">{n.nextSteps || n.whereStopped || 'No next step written yet'}</span>
+              <span className="dash-note__next">{n.nextSteps || n.whereStopped || 'No next step written yet'}</span>
+              <ArrowUpRight size={15} className="dash-note__arrow" />
             </Link>
           );
         })}
@@ -311,18 +371,20 @@ function ParkedThoughts({ sessions }: { sessions: Session[] }) {
   if (!open.length) return null;
   const resolve = (s: Session, id: string) => sessionsRepo.patch(s.id, { distractions: s.distractions.map((d) => (d.id === id ? { ...d, done: true } : d)) });
   return (
-    <section className="card parked-card">
-      <div className="card__head">
-        <h2>Parked thoughts</h2>
-        <span className="small faint">{open.length} waiting</span>
+    <section className="dash-parked">
+      <div className="section__head">
+        <div>
+          <span className="eyebrow">Parked thoughts</span>
+          <h2>{open.length} waiting</h2>
+        </div>
       </div>
-      <ul className="thought-list thought-list--review">
-        {open.slice(0, 8).map(({ d, s }) => (
+      <ul className="checklist">
+        {open.slice(0, 6).map(({ d, s }) => (
           <li key={d.id}>
             <label>
               <input type="checkbox" onChange={() => void resolve(s, d.id)} />
               <span>{d.text}</span>
-              <span className="faint small" style={{ marginLeft: 'auto' }}>{relativeDay(d.createdAt)}</span>
+              <span className="faint xsmall">{relativeDay(d.createdAt)}</span>
             </label>
           </li>
         ))}

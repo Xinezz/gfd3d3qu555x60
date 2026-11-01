@@ -5,7 +5,7 @@
 .decor-shelf { position: absolute; bottom: 96px; display: flex; align-items: flex-end; gap: 10px; }
 .decor-shelf--left { left: 3%; transition: bottom 0.5s var(--ease); }
 /* The expanded music card sits bottom-left; lift the shelf above it. */
-.decor-layer.has-player .decor-shelf--left { bottom: 222px; }
+.decor-layer.has-player .decor-shelf--left { bottom: 282px; }
 .decor-shelf--right { right: 3%; }
 .decor { display: block; filter: drop-shadow(0 8px 14px rgb(0 0 0 / 0.45)); }
 .decor--mug { width: 56px; }
@@ -89,7 +89,7 @@
   .decor-shelf { bottom: 70px; gap: 4px; }
   .decor-shelf > * { zoom: 0.5; }
   .decor--lamp, .decor--books, .decor--vinyl { display: none; }
-  .decor-layer.has-player .decor-shelf--left { bottom: 236px; }
+  .decor-layer.has-player .decor-shelf--left { bottom: 300px; }
   .room.has-panel .decor-golden { left: 50%; }
 }
 

@@ -84,6 +84,8 @@ export interface AchievementUnlock extends BaseRecord {
 export type CompanionId = 'timer' | 'candle' | 'plant' | 'hourglass' | 'moon' | 'cat';
 
 export interface Settings {
+  /** How the dashboard greets you (optional). */
+  displayName: string;
   dailyGoalMin: number;
   /** Selected preset id (built-in or custom). Null = custom values below. */
   presetId: string | null;

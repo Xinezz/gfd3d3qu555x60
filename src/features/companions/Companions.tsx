@@ -40,24 +40,25 @@ export function TimerRing({ progress, clock, label, running, size }: CompanionPr
   return (
     <div className={`companion companion--ring ${size === 'large' ? 'is-large' : ''} ${running ? 'is-running' : ''}`}>
       <svg viewBox="0 0 300 300" aria-hidden>
-        <defs>
-          <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="var(--accent-2)" />
-            <stop offset="1" stopColor="var(--accent)" />
-          </linearGradient>
-        </defs>
-        <circle cx="150" cy="150" r={r + 14} className="ring__halo" />
+        <circle cx="150" cy="150" r={r - 10} className="ring__halo" />
+        {/* A watch face: 60 minute ticks; the elapsed ones light up. */}
+        {Array.from({ length: 60 }, (_, i) => {
+          const a = (i / 60) * Math.PI * 2 - Math.PI / 2;
+          const major = i % 5 === 0;
+          const r1 = r + (major ? 9 : 11);
+          return (
+            <line
+              key={i}
+              x1={150 + r1 * Math.cos(a)}
+              y1={150 + r1 * Math.sin(a)}
+              x2={150 + (r + 15) * Math.cos(a)}
+              y2={150 + (r + 15) * Math.sin(a)}
+              className={`ring__tick ${major ? 'is-major' : ''} ${i / 60 < progress ? 'is-lit' : ''}`}
+            />
+          );
+        })}
         <circle cx="150" cy="150" r={r} className="ring__track" />
-        <circle
-          cx="150"
-          cy="150"
-          r={r}
-          className="ring__progress"
-          stroke="url(#ring-grad)"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - progress)}
-          transform="rotate(-90 150 150)"
-        />
+        <circle cx="150" cy="150" r={r} className="ring__progress" strokeDasharray={c} strokeDashoffset={c * (1 - progress)} transform="rotate(-90 150 150)" />
         {progress > 0.002 && <circle cx={150 + r * Math.cos(angle)} cy={150 + r * Math.sin(angle)} r="5" className="ring__tip" />}
       </svg>
       <Clock clock={clock} label={label} />

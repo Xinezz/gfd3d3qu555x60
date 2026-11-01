@@ -67,106 +67,123 @@ export function NotesPage() {
 
   return (
     <div className="page notes">
-      <header className="notes__head">
+      <header className="page-head">
         <div>
           <p className="eyebrow">Your learning progress</p>
           <h1>Study Notes</h1>
+          <p className="muted">One page per topic: where you stopped, what you've learnt, what's still unclear, and what comes next.</p>
         </div>
         <button className="btn btn--primary" onClick={() => setEditing({ note: null })}>
           <Plus size={16} /> New note
         </button>
       </header>
 
-      <div className="notes__toolbar">
-        <label className="notes__search">
-          <Search size={16} aria-hidden />
-          <input className="input" type="search" placeholder="Search topics, what you learnt, questions…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search notes" />
-        </label>
-        <Segmented
-          label="Status"
-          value={status}
-          onChange={setStatus}
-          options={[
-            { value: 'all', label: 'All' },
-            { value: 'in_progress', label: 'In progress' },
-            { value: 'completed', label: 'Completed' },
-          ]}
-        />
-      </div>
+      <div className="notes__layout">
+        <aside className="notes__index" aria-label="Subjects">
+          <span className="eyebrow">Subjects</span>
+          <div className="subject-chips" role="group" aria-label="Filter by subject">
+            <button className={`subject-chip ${!subjectId ? 'is-active' : ''}`} onClick={() => setSubjectId('')} aria-pressed={!subjectId}>
+              <span className="subject-chip__name">All topics</span>
+              <span className="subject-chip__count num">{notes.length}</span>
+            </button>
+            {subjects.map((s) => {
+              const total = counts.get(s.id) ?? 0;
+              const done = notes.filter((n) => n.subjectId === s.id && n.status === 'completed').length;
+              return (
+                <button key={s.id} className={`subject-chip ${subjectId === s.id ? 'is-active' : ''}`} onClick={() => setSubjectId(s.id)} aria-pressed={subjectId === s.id}>
+                  <span className="dot" style={{ background: s.color }} />
+                  <span className="subject-chip__name">{s.name}</span>
+                  <span className="subject-chip__count num" title={`${done} of ${total} topics completed`}>
+                    {done}/{total}
+                  </span>
+                  {total > 0 && (
+                    <span className="subject-chip__bar" aria-hidden>
+                      <i style={{ width: `${(done / total) * 100}%`, background: s.color }} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            {counts.has('none') && (
+              <button className={`subject-chip ${subjectId === 'none' ? 'is-active' : ''}`} onClick={() => setSubjectId('none')} aria-pressed={subjectId === 'none'}>
+                <span className="subject-chip__name">No subject</span>
+                <span className="subject-chip__count num">{counts.get('none')}</span>
+              </button>
+            )}
+          </div>
+        </aside>
 
-      {(subjects.length > 0 || counts.has('none')) && (
-        <div className="subject-chips" role="group" aria-label="Filter by subject">
-          <button className={`subject-chip ${!subjectId ? 'is-active' : ''}`} onClick={() => setSubjectId('')} aria-pressed={!subjectId}>
-            All <span className="faint">{notes.length}</span>
-          </button>
-          {subjects.map((s) => (
-            <button key={s.id} className={`subject-chip ${subjectId === s.id ? 'is-active' : ''}`} onClick={() => setSubjectId(s.id)} aria-pressed={subjectId === s.id}>
-              <span className="dot" style={{ background: s.color }} />
-              {s.name} <span className="faint">{counts.get(s.id) ?? 0}</span>
-            </button>
-          ))}
-          {counts.has('none') && (
-            <button className={`subject-chip ${subjectId === 'none' ? 'is-active' : ''}`} onClick={() => setSubjectId('none')} aria-pressed={subjectId === 'none'}>
-              No subject <span className="faint">{counts.get('none')}</span>
-            </button>
+        <div className="notes__main">
+          <div className="notes__toolbar">
+            <label className="notes__search">
+              <Search size={16} aria-hidden />
+              <input className="input" type="search" placeholder="Search topics, what you learnt, questions…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search notes" />
+            </label>
+            <Segmented
+              label="Status"
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'in_progress', label: 'In progress' },
+                { value: 'completed', label: 'Completed' },
+              ]}
+            />
+          </div>
+
+          {!loading && notes.length === 0 ? (
+            <section className="card notes__empty">
+              <h2>Your study notebook is empty</h2>
+              <p className="muted">
+                Keep one note per topic or chapter: where you stopped, what you've learnt, what's still unclear, and what to do next. After each session you can update the
+                right note in a few seconds.
+              </p>
+              <button className="btn btn--primary" onClick={() => setEditing({ note: null })}>
+                <Plus size={16} /> Write your first note
+              </button>
+            </section>
+          ) : visible.length === 0 && !loading ? (
+            <p className="empty">No notes match. Try a different search or filter.</p>
+          ) : (
+            <div className="note-grid">
+              {visible.map((n) => {
+                const subj = n.subjectId ? byId.get(n.subjectId) : undefined;
+                return (
+                  <article key={n.id} className={`note-card ${n.status === 'completed' ? 'is-done' : ''}`} style={{ ['--subject' as string]: subj?.color ?? 'var(--text-3)' }}>
+                    <button className="note-card__open" onClick={() => setEditing({ note: n })} aria-label={`Open ${n.topic}`} />
+                    <div className="note-card__top">
+                      <span className="note-card__subject">{subj?.name ?? 'No subject'}</span>
+                      <button className="note-card__status" onClick={() => void toggleStatus(n)} title={n.status === 'completed' ? 'Mark in progress' : 'Mark completed'} aria-pressed={n.status === 'completed'}>
+                        {n.status === 'completed' ? <CheckCircle2 size={16} /> : <CircleDashed size={16} />}
+                        <span>{n.status === 'completed' ? 'Completed' : 'In progress'}</span>
+                      </button>
+                    </div>
+                    <h3>{n.topic}</h3>
+                    <p className="note-card__date num">Last studied {dateOf(n.lastStudied)}</p>
+                    {n.whereStopped && (
+                      <div className="note-card__field">
+                        <span>Where I stopped</span>
+                        <p>{n.whereStopped}</p>
+                      </div>
+                    )}
+                    {n.nextSteps && n.status !== 'completed' && (
+                      <div className="note-card__field note-card__next">
+                        <span>Next time</span>
+                        <p>{n.nextSteps}</p>
+                      </div>
+                    )}
+                    {n.confused && (
+                      <p className="note-card__confused small">
+                        <HelpCircle size={14} /> Open questions
+                      </p>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
           )}
         </div>
-      )}
-
-      {!loading && notes.length === 0 ? (
-        <section className="card notes__empty">
-          <h2>Your study notebook is empty</h2>
-          <p className="muted">
-            Keep one note per topic or chapter: where you stopped, what you've learnt, what's still unclear, and what to do next. After each session you can update the
-            right note in a few seconds.
-          </p>
-          <button className="btn btn--primary" onClick={() => setEditing({ note: null })}>
-            <Plus size={16} /> Write your first note
-          </button>
-        </section>
-      ) : visible.length === 0 && !loading ? (
-        <p className="empty">No notes match. Try a different search or filter.</p>
-      ) : (
-        <div className="note-grid">
-          {visible.map((n) => {
-            const subj = n.subjectId ? byId.get(n.subjectId) : undefined;
-            return (
-              <article key={n.id} className={`note-card ${n.status === 'completed' ? 'is-done' : ''}`}>
-                <button className="note-card__open" onClick={() => setEditing({ note: n })} aria-label={`Open ${n.topic}`} />
-                <div className="note-card__top">
-                  <span className="chip">
-                    <span className="dot" style={{ background: subj?.color ?? 'var(--text-3)' }} />
-                    {subj?.name ?? 'No subject'}
-                  </span>
-                  <button className="note-card__status" onClick={() => void toggleStatus(n)} title={n.status === 'completed' ? 'Mark in progress' : 'Mark completed'}>
-                    {n.status === 'completed' ? <CheckCircle2 size={16} /> : <CircleDashed size={16} />}
-                    {n.status === 'completed' ? 'Completed' : 'In progress'}
-                  </button>
-                </div>
-                <h3>{n.topic}</h3>
-                <p className="faint small">Last studied {dateOf(n.lastStudied)}</p>
-                {n.whereStopped && (
-                  <div className="note-card__field">
-                    <span>Where I stopped</span>
-                    <p>{n.whereStopped}</p>
-                  </div>
-                )}
-                {n.nextSteps && n.status !== 'completed' && (
-                  <div className="note-card__field note-card__next">
-                    <span>Next time</span>
-                    <p>{n.nextSteps}</p>
-                  </div>
-                )}
-                {n.confused && (
-                  <p className="note-card__confused small">
-                    <HelpCircle size={14} /> Open questions
-                  </p>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      )}
+      </div>
 
       {choosing && session && (
         <div className="overlay" onClick={endSessionFlow}>

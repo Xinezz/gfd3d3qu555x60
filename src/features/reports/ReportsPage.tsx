@@ -73,10 +73,13 @@ export function ReportsPage() {
   if (!loading && sessions.length === 0)
     return (
       <div className="page reports">
-        <header>
+        <header className="page-head">
+        <div>
           <p className="eyebrow">Your study habits</p>
           <h1>Focus Reports</h1>
-        </header>
+          <p className="muted">Every figure here is calculated from the sessions you have actually recorded.</p>
+        </div>
+      </header>
         <section className="card reports__empty">
           <h2>Nothing to report yet</h2>
           <p className="muted">Complete your first focus session and your statistics, charts and history will appear here, built entirely from your own sessions.</p>
@@ -89,9 +92,12 @@ export function ReportsPage() {
 
   return (
     <div className={`page reports ${loading ? 'is-loading' : ''}`}>
-      <header>
-        <p className="eyebrow">Your study habits</p>
-        <h1>Focus Reports</h1>
+      <header className="page-head">
+        <div>
+          <p className="eyebrow">Your study habits</p>
+          <h1>Focus Reports</h1>
+          <p className="muted">Every figure here is calculated from the sessions you have actually recorded.</p>
+        </div>
       </header>
 
       <div className="filters" role="group" aria-label="Filters">
@@ -251,8 +257,8 @@ function History({ sessions, subjectById }: { sessions: Session[]; subjectById: 
   };
 
   return (
-    <section className="card history">
-      <div className="card__head">
+    <section className="history">
+      <div className="section__head">
         <h2>Session history</h2>
         <span className="faint small">
           {sorted.length} {sorted.length === 1 ? 'session' : 'sessions'}

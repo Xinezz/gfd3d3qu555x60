@@ -1,7 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createHashRouter, RouterProvider } from 'react-router-dom';
-import '@fontsource-variable/fraunces';
+import '@fontsource/dm-serif-display/400.css';
+import '@fontsource/dm-serif-display/400-italic.css';
+import '@fontsource-variable/jetbrains-mono';
 import '@fontsource-variable/inter';
 import './styles/global.css';
 import './features/audio/audioStore'; // wires audio to session events at startup

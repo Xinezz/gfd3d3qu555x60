@@ -190,22 +190,30 @@ export function Room() {
   const controls = (
     <div className="room__controls">
       {timer.status === 'idle' ? (
-        <button className="btn btn--primary btn--lg room__start" onClick={primary}>
-          <Play size={18} /> Start focus
+        <button className="room-btn room-btn--start" onClick={primary}>
+          <Play size={18} fill="currentColor" /> Start focus
         </button>
       ) : (
         <>
-          <button className="icon-btn icon-btn--lg" onClick={() => void reset()} aria-label={isBreak ? 'Skip break' : 'Reset session'} title={isBreak ? 'Skip break' : 'Reset (discard)'}>
-            <RotateCcw size={18} />
-          </button>
-          <button className="btn btn--primary btn--lg" onClick={primary}>
-            {timer.status === 'running' ? <Pause size={18} /> : <Play size={18} />}
-            {timer.status === 'running' ? 'Pause' : 'Resume'}
-          </button>
-          {!isBreak && (
-            <button className="icon-btn icon-btn--lg" onClick={() => void finish()} aria-label="Finish session early" title="Finish early (save)">
-              <Square size={16} />
+          <span className="room__ctl">
+            <button className="room-btn room-btn--round" onClick={() => void reset()} aria-label={isBreak ? 'Skip break' : 'Reset session'}>
+              <RotateCcw size={17} />
             </button>
+            <span>{isBreak ? 'Skip' : 'Reset'}</span>
+          </span>
+          <span className="room__ctl">
+            <button className="room-btn room-btn--round room-btn--main" onClick={primary} aria-label={timer.status === 'running' ? 'Pause' : 'Resume'}>
+              {timer.status === 'running' ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
+            </button>
+            <span>{timer.status === 'running' ? 'Pause' : 'Resume'}</span>
+          </span>
+          {!isBreak && (
+            <span className="room__ctl">
+              <button className="room-btn room-btn--round" onClick={() => void finish()} aria-label="Finish session early">
+                <Square size={14} fill="currentColor" />
+              </button>
+              <span>Finish</span>
+            </span>
           )}
         </>
       )}
@@ -213,20 +221,32 @@ export function Room() {
   );
 
   return (
-    <div className={`room ${lightsOff ? 'is-dark' : ''} ${lightsOff && !awake ? 'is-asleep' : ''} ${panel ? 'has-panel' : ''}`} style={{ ['--env-glow' as string]: env.glow }}>
-      <Scene id={env.id} dim={lightsOff ? 0.12 : 0.38} />
+    <div
+      className={`room ${lightsOff ? 'is-dark' : ''} ${lightsOff && !awake ? 'is-asleep' : ''} ${panel ? 'has-panel' : ''} ${timer.status !== 'idle' ? 'is-active' : ''}`}
+      style={{ ['--env-glow' as string]: env.glow, ['--env-ink' as string]: env.ink }}
+    >
+      <Scene id={env.id} dim={lightsOff ? 0.12 : 0.36} />
       <DecorLayer active={rewards.activeDecor} dark={lightsOff} makeRoomForPlayer={!lightsOff && playerExpanded(sound)} />
 
       <header className="room__top">
-        <div>
+        <div className="room__where">
+          <span className="room__env">
+            <i />
+            {env.name}
+          </span>
           <h1 className="room__title">Lock-In Room</h1>
-          <p className="faint small">
-            {today.count ? `${today.count} ${today.count === 1 ? 'session' : 'sessions'} · ${formatDuration(today.focusMs)} today` : 'No sessions yet today'}
-          </p>
         </div>
-        <button className="btn room__lights" onClick={() => void enterLightsOff(settings.lightsOffFullscreen)} title="Lights off (L)">
-          <Moon size={16} /> Lights off
-        </button>
+        <div className="room__top-right">
+          <span className="room__today">
+            <span className="num">{formatDuration(today.focusMs)}</span>
+            <span>
+              today · {today.count} {today.count === 1 ? 'session' : 'sessions'}
+            </span>
+          </span>
+          <button className="room-btn room-btn--glass" onClick={() => void enterLightsOff(settings.lightsOffFullscreen)} title="Lights off (L)">
+            <Moon size={15} /> <span>Lights off</span>
+          </button>
+        </div>
       </header>
 
       <div className="room__stage">
@@ -308,11 +328,11 @@ export function Room() {
 
       {lightsOff && (
         <div className="room__dark-bar">
-          <button className="btn btn--ghost" onClick={() => setCapture(true)}>
-            <NotebookPen size={16} /> Park a thought
+          <button className="room-btn room-btn--whisper" onClick={() => setCapture(true)}>
+            <NotebookPen size={15} /> Park a thought <kbd>D</kbd>
           </button>
-          <button className="btn" onClick={exitLightsOff}>
-            <Sun size={16} /> Lights on <kbd>Esc</kbd>
+          <button className="room-btn room-btn--whisper" onClick={exitLightsOff}>
+            <Sun size={15} /> Lights on <kbd>Esc</kbd>
           </button>
         </div>
       )}

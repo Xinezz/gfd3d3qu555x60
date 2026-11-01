@@ -37,12 +37,14 @@ export function AchievementsPage() {
 
   return (
     <div className={`page achievements ${loading ? 'is-loading' : ''}`}>
-      <header>
-        <p className="eyebrow">Your progress</p>
-        <h1>Achievements</h1>
-        <p className="muted">
-          {count} of {ACHIEVEMENTS.length} unlocked. Every one is earned from your recorded sessions.
-        </p>
+      <header className="page-head">
+        <div>
+          <p className="eyebrow">Your progress</p>
+          <h1>Achievements</h1>
+          <p className="muted">
+            {count} of {ACHIEVEMENTS.length} emblems collected. Every one is earned from your recorded sessions.
+          </p>
+        </div>
       </header>
 
       <section className="ach-hero">
@@ -51,6 +53,21 @@ export function AchievementsPage() {
           <div className="ach-hero__hours">
             <span className="ach-hero__value num">{formatHours(metrics.focusMs)}</span>
             <span className="ach-hero__unit">hours</span>
+          </div>
+          <div className="ach-tally" aria-label="Emblems by tier">
+            {(['bronze', 'silver', 'gold', 'platinum', 'legendary'] as const).map((t) => {
+              const all = ACHIEVEMENTS.filter((a) => a.tier === t);
+              const got = all.filter((a) => unlockedAt.has(a.id)).length;
+              return (
+                <span key={t} className={`ach-tally__item tier-${t} ${got ? 'has-some' : ''}`} title={`${TIER_LABEL[t]}: ${got} of ${all.length}`}>
+                  <i />
+                  <span className="num">
+                    {got}/{all.length}
+                  </span>
+                  <span>{TIER_LABEL[t]}</span>
+                </span>
+              );
+            })}
           </div>
         </div>
         <div className="ach-hero__next">
@@ -136,15 +153,22 @@ export function AchievementsPage() {
               </span>
             </div>
             <div className="ach-grid">
-              {items.map((a) => {
+              {items.map((a, i) => {
                 const at = unlockedAt.get(a.id);
                 const isUnlocked = at != null;
                 const p = progressOf(a, metrics);
+                const legend = a.tier === 'legendary';
                 return (
-                  <article key={a.id} className={`ach-card tier-${a.tier} ${isUnlocked ? 'is-unlocked' : 'is-locked'}`}>
-                    <Badge achievement={a} unlocked={isUnlocked} size={a.tier === 'legendary' ? 88 : 60} />
+                  <article
+                    key={a.id}
+                    className={`ach-card tier-${a.tier} ${isUnlocked ? 'is-unlocked' : 'is-locked'} ${legend ? 'ach-card--legend' : ''}`}
+                    style={{ animationDelay: `${i * 40}ms` }}
+                  >
+                    <Badge achievement={a} unlocked={isUnlocked} size={legend ? 132 : 84} />
                     <div className="ach-card__body">
+                      {legend && <span className="eyebrow ach-card__legend-label">The summit</span>}
                       <span className="ach-card__name">{a.name}</span>
+                      <span className={`ach-card__tier tier-${a.tier}`}>{TIER_LABEL[a.tier]}</span>
                       <span className="ach-card__desc">{a.description}</span>
                       {rewardsFor(a.id).length > 0 && (
                         <span className="ach-card__reward">
@@ -153,10 +177,7 @@ export function AchievementsPage() {
                       )}
                       <div className="ach-card__meta">
                         {isUnlocked ? (
-                          <>
-                            <span className="ach-card__date">Unlocked {formatDate(at, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                            <span>{TIER_LABEL[a.tier]}</span>
-                          </>
+                          <span className="ach-card__date num">Earned {formatDate(at, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                         ) : (
                           <>
                             <span className="progress-bar" aria-hidden>
@@ -175,8 +196,8 @@ export function AchievementsPage() {
         );
       })}
 
-      {tab === 'achievements' && <section className="card">
-        <div className="card__head">
+      {tab === 'achievements' && <section className="ach-log">
+        <div className="section__head">
           <h2>Unlock history</h2>
           <span className="faint small">{history.length} unlocked</span>
         </div>

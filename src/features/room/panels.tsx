@@ -192,7 +192,7 @@ export function ScenePanel() {
             <button
               key={e.id}
               className={`env ${s.environmentId === e.id ? 'is-active' : ''} ${locked ? 'is-locked' : ''}`}
-              style={{ ['--glow' as string]: e.glow }}
+              style={{ ['--tile-glow' as string]: e.glow, ['--s1' as string]: e.sky[0], ['--s2' as string]: e.sky[1], ['--s3' as string]: e.sky[2] }}
               onClick={() => (locked ? toast(`Unlocks with “${unlockName(e.reward)}”`) : audio.selectEnvironment(e.id))}
               aria-disabled={locked}
             >

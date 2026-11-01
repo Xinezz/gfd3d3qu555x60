@@ -10,7 +10,7 @@ import { live } from './stats';
  */
 
 export type Metric = 'focusMs' | 'bestStreak' | 'completedSessions' | 'longestSessionMs' | 'bestDayMs' | 'reflections';
-export type Tier = 'bronze' | 'silver' | 'gold' | 'radiant' | 'legendary';
+export type Tier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'legendary';
 export type CategoryId = 'getting-started' | 'long-term' | 'consistency' | 'sessions' | 'craft';
 
 export interface Achievement {
@@ -33,7 +33,7 @@ export const CATEGORIES: { id: CategoryId; name: string; blurb: string }[] = [
 
 const HOUR_TIERS: Record<string, Tier> = {
   'h-first-minute': 'bronze', 'h-1': 'bronze', 'h-5': 'bronze', 'h-10': 'silver', 'h-25': 'silver',
-  'h-50': 'gold', 'h-100': 'gold', 'h-250': 'radiant', 'h-500': 'radiant', 'h-750': 'radiant', 'h-1000': 'legendary',
+  'h-50': 'gold', 'h-100': 'gold', 'h-250': 'platinum', 'h-500': 'platinum', 'h-750': 'platinum', 'h-1000': 'legendary',
 };
 
 const LONG_TERM_COPY: Record<string, string> = {
@@ -56,12 +56,12 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'streak-3', category: 'consistency', name: 'Three in a Row', description: 'Study 3 days in a row.', metric: 'bestStreak', threshold: 3, tier: 'bronze' },
   { id: 'streak-7', category: 'consistency', name: 'A Full Week', description: 'Study 7 days in a row.', metric: 'bestStreak', threshold: 7, tier: 'silver' },
   { id: 'streak-14', category: 'consistency', name: 'Two Weeks Strong', description: 'Study 14 days in a row.', metric: 'bestStreak', threshold: 14, tier: 'gold' },
-  { id: 'streak-30', category: 'consistency', name: 'Month of Focus', description: 'Study 30 days in a row.', metric: 'bestStreak', threshold: 30, tier: 'radiant' },
-  { id: 'streak-100', category: 'consistency', name: 'Hundred-Day Habit', description: 'Study 100 days in a row.', metric: 'bestStreak', threshold: 100, tier: 'radiant' },
+  { id: 'streak-30', category: 'consistency', name: 'Month of Focus', description: 'Study 30 days in a row.', metric: 'bestStreak', threshold: 30, tier: 'platinum' },
+  { id: 'streak-100', category: 'consistency', name: 'Hundred-Day Habit', description: 'Study 100 days in a row.', metric: 'bestStreak', threshold: 100, tier: 'platinum' },
   { id: 'sessions-10', category: 'sessions', name: 'Warming Up', description: 'Complete 10 full focus sessions.', metric: 'completedSessions', threshold: 10, tier: 'bronze' },
   { id: 'sessions-50', category: 'sessions', name: 'Half Century', description: 'Complete 50 full focus sessions.', metric: 'completedSessions', threshold: 50, tier: 'silver' },
   { id: 'sessions-100', category: 'sessions', name: 'Centurion', description: 'Complete 100 full focus sessions.', metric: 'completedSessions', threshold: 100, tier: 'gold' },
-  { id: 'sessions-500', category: 'sessions', name: 'Unstoppable', description: 'Complete 500 full focus sessions.', metric: 'completedSessions', threshold: 500, tier: 'radiant' },
+  { id: 'sessions-500', category: 'sessions', name: 'Unstoppable', description: 'Complete 500 full focus sessions.', metric: 'completedSessions', threshold: 500, tier: 'platinum' },
   { id: 'deep-90', category: 'craft', name: 'Deep Diver', description: 'Focus for 90 minutes in a single session.', metric: 'longestSessionMs', threshold: 90 * MINUTE, tier: 'silver' },
   { id: 'day-4h', category: 'craft', name: 'Marathon Day', description: 'Focus for 4 hours in a single day.', metric: 'bestDayMs', threshold: 4 * HOUR, tier: 'gold' },
   { id: 'reflect-10', category: 'craft', name: 'Reflective', description: 'Write 10 session reflections.', metric: 'reflections', threshold: 10, tier: 'bronze' },

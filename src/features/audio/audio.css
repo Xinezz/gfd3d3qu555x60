@@ -1,31 +1,63 @@
+/* Floating music capsule: out of the way, never in front of the timer. */
 .now-playing {
   position: fixed;
-  left: calc(var(--sidebar) + 20px);
-  bottom: 20px;
+  left: calc(var(--sidebar) + var(--s-5));
+  bottom: var(--s-5);
   z-index: 40;
-  width: 248px;
-  border-radius: 18px;
-  overflow: hidden;
-  background: var(--glass);
-  backdrop-filter: blur(18px);
+  width: 264px;
+  padding: var(--s-2);
+  border-radius: var(--r-l);
+  background: rgb(20 15 12 / 0.72);
+  backdrop-filter: blur(20px) saturate(1.15);
   border: 1px solid var(--line-2);
-  box-shadow: var(--shadow-lift);
-  transition: opacity 0.4s var(--ease), transform 0.4s var(--ease), width 0.3s var(--ease);
+  box-shadow: var(--shadow-3);
+  transition: opacity 0.4s var(--ease), transform 0.4s var(--ease), width var(--dur-3) var(--ease);
 }
-.now-playing.is-hidden { opacity: 0; transform: translateY(20px); pointer-events: none; }
-.now-playing__video { aspect-ratio: 16 / 9; background: #000; transition: height 0.3s; }
+.now-playing.is-hidden { opacity: 0; transform: translateY(16px); pointer-events: none; }
+.now-playing__video { aspect-ratio: 16 / 9; border-radius: var(--r); overflow: hidden; background: #000; }
 .now-playing__video > div, .now-playing__video iframe { width: 100%; height: 100%; display: block; border: 0; }
-.now-playing.is-min { width: 230px; }
-.now-playing.is-min .now-playing__video { position: absolute; width: 2px; height: 2px; opacity: 0.01; pointer-events: none; overflow: hidden; }
-.now-playing__bar { display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 4px; }
-.now-playing__text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
-.now-playing__status { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.now-playing__title { font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.now-playing.is-dark { left: 20px; opacity: 0.35; }
+/* Folded: the video stays in the page (so it keeps playing) but shrinks to nothing. */
+.now-playing.is-min { width: 250px; padding: var(--s-1) var(--s-1) var(--s-1) var(--s-3); border-radius: var(--r-full); }
+.now-playing.is-min .now-playing__video { position: absolute; width: 2px; height: 2px; opacity: 0.01; pointer-events: none; }
+.now-playing__bar { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-1) var(--s-1) var(--s-2); }
+.now-playing.is-min .now-playing__bar { padding: 0; }
+.now-playing__text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.now-playing__status { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now-playing__title { font-size: var(--fs-xs); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now-playing__play {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cream);
+  color: var(--walnut-900);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease), background var(--dur-2);
+}
+.now-playing__play:hover { background: #fff; }
+.now-playing__play:active { transform: scale(0.92); }
+.now-playing__fold { width: 30px; height: 30px; }
+.now-playing__volume { display: flex; align-items: center; gap: var(--s-1); padding: 0 var(--s-2) var(--s-1) 0; }
+.now-playing__volume .icon-btn { width: 30px; height: 30px; }
+
+/* Four-bar equaliser that dances only while sound is actually playing. */
+.eq { display: flex; align-items: flex-end; gap: 2px; width: 16px; height: 14px; flex: none; }
+.eq i { flex: 1; height: 30%; border-radius: 1px; background: var(--accent); opacity: 0.55; }
+.eq.is-playing i { opacity: 1; animation: eq 1.1s ease-in-out infinite; }
+.eq.is-playing i:nth-child(2) { animation-delay: -0.4s; animation-duration: 0.9s; }
+.eq.is-playing i:nth-child(3) { animation-delay: -0.7s; animation-duration: 1.3s; }
+.eq.is-playing i:nth-child(4) { animation-delay: -0.2s; animation-duration: 1s; }
+@keyframes eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+
+/* Lights off: almost invisible until you reach for it. */
+.now-playing.is-dark { left: var(--s-5); opacity: 0.16; background: rgb(10 8 6 / 0.5); border-color: transparent; }
 .now-playing.is-dark:hover { opacity: 1; }
 .now-playing.is-dark.is-hidden { opacity: 0; }
 
 @media (max-width: 860px) {
-  .now-playing { left: 12px; bottom: calc(var(--tabbar) + 12px + env(safe-area-inset-bottom)); }
-  .now-playing.is-dark { bottom: 12px; }
+  .now-playing { left: var(--s-3); bottom: calc(var(--tabbar) + var(--s-3) + env(safe-area-inset-bottom)); }
+  .now-playing.is-dark { bottom: var(--s-3); }
 }

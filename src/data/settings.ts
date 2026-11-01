@@ -8,6 +8,7 @@ import type { Settings } from '../domain/types';
 const KEY = 'lockin.settings.v1';
 
 export const DEFAULT_SETTINGS: Settings = {
+  displayName: '',
   dailyGoalMin: 120,
   presetId: 'builtin-25',
   focusMin: 25,

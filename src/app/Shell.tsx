@@ -1,9 +1,12 @@
-import { useEffect } from 'react';
+import { Fragment, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { BarChart3, BookOpen, Home, Settings, Timer, Trophy } from 'lucide-react';
 import { useRoom } from '../features/session/sessionStore';
 import { remainingMs } from '../domain/timer';
-import { formatClock } from '../domain/time';
+import { formatClock, formatDuration } from '../domain/time';
+import { todayStats } from '../domain/stats';
+import { useSessions } from '../data/hooks';
+import { Pixel } from '../ui/Pixel';
 import { NowPlaying } from '../features/audio/NowPlaying';
 import { Completion } from '../features/room/Completion';
 import { AchievementCenter } from '../features/achievements/Celebration';
@@ -47,28 +50,62 @@ function LivePill() {
   );
 }
 
+/** A quiet reminder of today's total, always in view. */
+function TodayLine() {
+  const { sessions } = useSessions();
+  const { focusMs } = todayStats(sessions);
+  return (
+    <div className="sidebar__today">
+      <span>Today</span>
+      <span className="num">{formatDuration(focusMs)}</span>
+    </div>
+  );
+}
+
+/** Each page opens at its top rather than inheriting the previous page's scroll. */
+function useScrollReset() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+}
+
 export function Shell() {
   useLiveTitle();
+  useScrollReset();
   // App-wide, so a session that ended while you were elsewhere (or away) still gets its reflection.
   const { reviewId } = useRoom();
   const lightsOff = lightsOffStore.use();
   return (
     <div className={`shell ${lightsOff ? 'is-lights-off' : ''}`}>
       <aside className="sidebar">
-        <div className="brand">
-          <span className="brand__mark" aria-hidden />
-          LOCK IN
-        </div>
+        <NavLink to="/" className="brand" aria-label="LOCK IN home">
+          <span className="brand__mark">
+            <Pixel name="lock" scale={2} />
+          </span>
+          <span className="brand__name">
+            Lock <span>In</span>
+          </span>
+        </NavLink>
         <nav aria-label="Main">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className="nav-link">
-              <Icon size={18} strokeWidth={1.8} />
-              {label}
-            </NavLink>
+          {NAV.filter((n) => n.to !== '/settings').map(({ to, label, icon: Icon, end }, i) => (
+            <Fragment key={to}>
+              {i === 0 && <span className="nav-label eyebrow">Focus</span>}
+              {i === 2 && <span className="nav-label eyebrow nav-label--gap">Progress</span>}
+              <NavLink to={to} end={end} className="nav-link">
+                <Icon size={17} strokeWidth={1.7} />
+                {label}
+              </NavLink>
+            </Fragment>
           ))}
         </nav>
         <div className="sidebar__foot">
           <LivePill />
+          <TodayLine />
+          <NavLink to="/settings" className="nav-link">
+            <Settings size={17} strokeWidth={1.7} />
+            Settings
+          </NavLink>
         </div>
       </aside>
       <main className="main">
