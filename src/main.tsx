@@ -5,6 +5,7 @@ import '@fontsource-variable/fraunces';
 import '@fontsource-variable/inter';
 import './styles/global.css';
 import './features/audio/audioStore'; // wires audio to session events at startup
+import './sync/syncStore'; // starts cloud sync when this build has a Supabase project
 import { Shell } from './app/Shell';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { Room } from './features/room/Room';

@@ -79,3 +79,6 @@ if (typeof window !== 'undefined') {
 export function useSettings(): Settings {
   return useSyncExternalStore(subscribe, getSettings);
 }
+
+/** Notified on every settings change (used by sync to upload preference changes). */
+export const onSettingsChange = subscribe;

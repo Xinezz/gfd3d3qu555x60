@@ -27,6 +27,11 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          # Optional cloud sync. Set these as repository Variables (Settings > Secrets and variables > Actions > Variables).
+          # Both are public by design; row-level security in supabase/schema.sql protects the data.
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

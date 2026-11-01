@@ -20,7 +20,7 @@ The built site must be served over http(s). Opening `dist/index.html` directly f
 | 1 | Shell, dashboard, Lock-In Room, timer, music, environments, companions, Lights Off, distractions, reflections, persistence, backups | **Done** |
 | 2 | Focus Reports (stats, daily/weekly/monthly + subject charts, consistency heatmap, filterable history), Study Notes (search, subject/status filters, update-from-reflection) | **Done** |
 | 3 | Achievements: 24 across hours, long-term milestones, consistency, sessions and deep work; unlock celebrations (legendary for 1,000h); the road to 1,000 hours; unlock history | **Done** |
-| 4 | Rewards earned through achievements (no currency): 10 room decorations, 4 unlockable environments, 3 new companions (1 free); rewards gallery | **Done**, except account sync (needs a backend; see below) |
+| 4 | Rewards earned through achievements (no currency): 10 room decorations, 4 unlockable environments, 3 new companions (1 free); rewards gallery; optional Supabase account sync | **Done** (sync needs the one-time Supabase setup below) |
 
 ## Architecture
 
@@ -42,6 +42,7 @@ src/
     notes/      Study Notes + editor
     achievements/ Collection page, badges, unlock watcher + celebrations
     rewards/    Decorations layer, rewards gallery, unlock hooks
+  sync/       Cloud sync: engine (tested), IndexedDB adapter, Supabase adapter, account store
     settings/   Preferences, subjects, presets, data & backup
   ui/         Shared controls (toggle, slider, stepper, confirm dialog, toasts) and charts/
   styles/     Design tokens + global styles
@@ -63,8 +64,20 @@ src/
 ## Rewards
 Every reward unlocks with a specific achievement (`domain/rewards.ts`). Nothing is bought and there is no currency. Because achievement unlocks are permanent, rewards are too. Earned decorations appear in the room automatically and can be switched off in the Decor panel. Locked environments and companions are visible in their panels with what unlocks them. If a locked choice arrives in a backup from another device, the room falls back to the defaults until it's earned here.
 
-## Account sync (not built yet)
-The data layer is ready for it (repositories, `updatedAt`/`deletedAt` on every record, last-write-wins merge in `data/merge.ts`). What's missing is a backend and an account, which you have to create yourself (e.g. a free Supabase or Firebase project). Until then, move data between devices with backup export/import.
+## Account sync (optional, Supabase)
+Sign in with an emailed code in Settings → Account & sync, and sessions, reflections, notes, subjects, presets, achievement unlocks and preferences sync across every device signed in with that email. A running timer stays on its own device. Without a Supabase project configured, the app is local-only and never loads the sync library.
+
+**How it works** (`src/sync/`): each device pushes records changed since its last push, then pulls everything changed after its server cursor. The server keeps a row only if it's newer (`lockin_push` in `supabase/schema.sql`), so an older edit can't overwrite a newer one. Achievement unlocks merge instead: the earliest date wins, and once one device has celebrated an unlock, no other device celebrates it again. Sync runs on start, every minute, on tab focus, when you come back online, and a few seconds after any change. Offline changes wait and go up later.
+
+**One-time setup**
+1. Create a free project at supabase.com.
+2. SQL Editor → paste `supabase/schema.sql` → Run.
+3. Authentication → URL Configuration: set **Site URL** to the hosted app (e.g. `https://xinezz.github.io/gfd3d3qu555x60/`) and add `http://localhost:5173/` under Redirect URLs.
+4. Authentication → Email Templates → **Magic Link**: add `Your code: {{ .Token }}` to the message so the email carries a 6-digit code as well as the link.
+5. Project Settings → API (or "Data API"): copy the **Project URL** and the **anon / publishable** key. Both are designed to be public; row-level security keeps each account's rows private.
+6. Hosted site: GitHub repo → Settings → Secrets and variables → Actions → **Variables**: add `SUPABASE_URL` and `SUPABASE_ANON_KEY`, then re-run the deploy (or push). Local dev: copy `.env.example` to `.env.local` and fill in the same two values.
+
+"Delete all data" while signed in also deletes your cloud rows. Other signed-in devices keep their own local copies until you clear them there.
 
 ## Charts
 Hand-built (no chart library). Subject colours are a categorical palette validated for colour-blind separation and contrast against the dark card surface. The heatmap uses a single amber ramp with fixed thresholds (under 30m … 3h+), so its colours keep the same meaning as your history grows. Every bar and cell has a hover/focus tooltip, and charts include a screen-reader table.

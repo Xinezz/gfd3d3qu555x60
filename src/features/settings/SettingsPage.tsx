@@ -8,6 +8,8 @@ import { updateSettings, useSettings } from '../../data/settings';
 import { db, isStoragePersistent, requestPersistentStorage } from '../../data/db';
 import { deleteAllData, downloadBackup, downloadSessionsCsv, importBackup } from '../../data/backup';
 import { confirmDialog, Stepper, toast, Toggle } from '../../ui';
+import { deleteCloudData, getSyncState, uploadEverything } from '../../sync/syncStore';
+import { AccountSection } from './AccountSection';
 import './settings.css';
 
 const LAST_BACKUP_KEY = 'lockin.lastBackup';
@@ -20,6 +22,8 @@ export function SettingsPage() {
         <p className="eyebrow">Preferences</p>
         <h1>Settings</h1>
       </header>
+
+      <AccountSection />
 
       <section className="card">
         <h2>Daily goal</h2>
@@ -172,6 +176,7 @@ function DataSection() {
     try {
       const r = await importBackup(await file.text());
       toast(`Imported ${r.sessions} sessions, ${r.notes} notes, ${r.subjects} subjects, ${r.presets} presets`, 4500);
+      uploadEverything();
     } catch (e) {
       toast((e as Error).message, 5000);
     } finally {
@@ -182,13 +187,21 @@ function DataSection() {
   const wipe = async () => {
     const first = await confirmDialog({
       title: 'Delete all study data?',
-      body: 'Every session, reflection, note, achievement, subject and preset in this browser will be permanently removed. Export a backup first if you might want it back.',
+      body: getSyncState().userId
+        ? 'Every session, reflection, note, achievement, subject and preset will be permanently removed from this browser AND your cloud account. Other signed-in devices keep their local copies until you clear them there. Export a backup first if you might want it back.'
+        : 'Every session, reflection, note, achievement, subject and preset in this browser will be permanently removed. Export a backup first if you might want it back.',
       confirmLabel: 'Continue',
       danger: true,
     });
     if (!first) return;
     const second = await confirmDialog({ title: 'Are you completely sure?', body: 'This cannot be undone.', confirmLabel: 'Delete everything', danger: true });
     if (!second) return;
+    try {
+      await deleteCloudData();
+    } catch (e) {
+      toast(`Couldn't delete cloud data: ${(e as Error).message}. Nothing was deleted.`, 6000);
+      return;
+    }
     await deleteAllData();
     toast('All study data deleted');
   };

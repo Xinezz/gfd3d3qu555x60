@@ -13,3 +13,8 @@
 .settings__status strong { color: var(--text); font-weight: 500; }
 .settings__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .settings__danger { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+.sync-status { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: rgb(239 230 216 / 0.035); color: var(--accent-2); }
+.sync-status > div { display: flex; flex-direction: column; color: var(--text); }
+.sync-code { max-width: 200px; font-size: 1.3rem; letter-spacing: 0.3em; font-variant-numeric: tabular-nums; }
+.warn { color: var(--rose); }
