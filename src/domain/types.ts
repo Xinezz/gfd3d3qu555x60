@@ -18,8 +18,13 @@ export type TaskOutcome = 'yes' | 'partly' | 'no';
 
 export interface Reflection {
   accomplished: string;
+  /** "Did I achieve my intended objective?" */
   completedTask: TaskOutcome | null;
   nextTime: string;
+  /** Optional focus-quality answers (absent on reflections written before they existed). */
+  focusRating?: number | null;
+  distractedBy?: string;
+  learnt?: string;
 }
 
 export interface Distraction {
@@ -41,6 +46,8 @@ export interface Session extends BaseRecord {
   status: SessionStatus;
   subjectId: ID | null;
   task: string;
+  /** Planner task this session worked on (absent on older sessions). */
+  taskId?: ID | null;
   reflection: Reflection | null;
   distractions: Distraction[];
   environmentId: string;
@@ -57,6 +64,39 @@ export interface Preset extends BaseRecord {
   name: string;
   focusMin: number;
   breakMin: number;
+  /* Session template extras. Presets saved before templates existed have none of these and
+     only set the timer. */
+  environmentId?: string;
+  companionId?: CompanionId;
+  musicId?: string;
+  customMusicUrl?: string;
+  musicVolume?: number;
+  ambienceVolume?: number;
+  ambienceOn?: boolean;
+  lightsOff?: boolean;
+}
+
+export type TaskPriority = 'low' | 'medium' | 'high';
+
+/** A planner task. Sessions linked by `taskId` count toward its progress. */
+export interface Task extends BaseRecord {
+  title: string;
+  subjectId: ID | null;
+  /** Local day (YYYY-MM-DD) it's due, or null. */
+  dueDate: string | null;
+  /** Estimated study time in minutes, or null. */
+  estimateMin: number | null;
+  priority: TaskPriority;
+  done: boolean;
+  completedAt: number | null;
+}
+
+/** A long-term target on lifetime focus hours, e.g. "300 hours before finals". */
+export interface LongTermGoal {
+  id: ID;
+  label: string;
+  targetHours: number;
+  createdAt: number;
 }
 
 export type NoteStatus = 'in_progress' | 'completed';
@@ -87,6 +127,10 @@ export interface Settings {
   /** How the dashboard greets you (optional). */
   displayName: string;
   dailyGoalMin: number;
+  /** 0 = no goal set. */
+  weeklyGoalMin: number;
+  monthlyGoalMin: number;
+  longTermGoals: LongTermGoal[];
   /** Selected preset id (built-in or custom). Null = custom values below. */
   presetId: string | null;
   focusMin: number;

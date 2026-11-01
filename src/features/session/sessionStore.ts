@@ -100,6 +100,7 @@ function buildSession(t: T.LiveTimer, now: number, early: boolean): Session {
     status: early ? 'ended_early' : 'completed',
     subjectId: t.subjectId,
     task: t.task.trim(),
+    taskId: t.taskId ?? null,
     reflection: null,
     distractions: t.distractions,
     environmentId: s.environmentId,
@@ -136,8 +137,14 @@ export const room = {
     if (state.timer.status !== 'idle') return;
     set({ ...state, timer: T.idleTimer({ focusMin, breakMin }, state.timer) });
   },
-  setContext(ctx: { subjectId?: string | null; task?: string }) {
+  setContext(ctx: { subjectId?: string | null; task?: string; taskId?: string | null }) {
     set({ ...state, timer: { ...state.timer, ...ctx } });
+  },
+  /** A planner task was completed: stop counting the next session toward it. */
+  releaseTask(taskId: string, title: string) {
+    const t = state.timer;
+    if (t.status !== 'idle' || t.taskId !== taskId) return;
+    set({ ...state, timer: { ...t, taskId: null, task: t.task.trim() === title ? '' : t.task } });
   },
   start() {
     if (state.timer.status !== 'idle') return;

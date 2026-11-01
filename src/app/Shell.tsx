@@ -1,6 +1,6 @@
 import { Fragment, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { BarChart3, BookOpen, Home, Settings, Timer, Trophy } from 'lucide-react';
+import { BarChart3, BookOpen, Home, ListChecks, Settings, Timer, Trophy } from 'lucide-react';
 import { useRoom } from '../features/session/sessionStore';
 import { remainingMs } from '../domain/timer';
 import { formatClock, formatDuration } from '../domain/time';
@@ -15,6 +15,7 @@ import { ConfirmHost, lightsOffStore, Toasts, useNow } from '../ui';
 const NAV = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/room', label: 'Lock-In Room', short: 'Room', icon: Timer },
+  { to: '/planner', label: 'Planner', icon: ListChecks },
   { to: '/reports', label: 'Focus Reports', short: 'Reports', icon: BarChart3 },
   { to: '/notes', label: 'Study Notes', short: 'Notes', icon: BookOpen },
   { to: '/achievements', label: 'Achievements', short: 'Awards', icon: Trophy },
@@ -91,7 +92,7 @@ export function Shell() {
           {NAV.filter((n) => n.to !== '/settings').map(({ to, label, icon: Icon, end }, i) => (
             <Fragment key={to}>
               {i === 0 && <span className="nav-label eyebrow">Focus</span>}
-              {i === 2 && <span className="nav-label eyebrow nav-label--gap">Progress</span>}
+              {to === '/reports' && <span className="nav-label eyebrow nav-label--gap">Progress</span>}
               <NavLink to={to} end={end} className="nav-link">
                 <Icon size={17} strokeWidth={1.7} />
                 {label}

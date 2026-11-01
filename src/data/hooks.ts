@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { AchievementUnlock, Note, Preset, Session, Subject } from '../domain/types';
+import type { AchievementUnlock, Note, Preset, Session, Subject, Task } from '../domain/types';
 import { db } from './db';
-import { notesRepo, presetsRepo, sessionsRepo, subjectsRepo, unlocksRepo } from './repo';
+import { notesRepo, presetsRepo, sessionsRepo, subjectsRepo, tasksRepo, unlocksRepo } from './repo';
 
 /** Live queries: components re-render automatically whenever the underlying data changes. */
 
@@ -35,4 +35,9 @@ export function useNotes(): { notes: Note[]; loading: boolean } {
 export function useUnlocks(): { unlocks: AchievementUnlock[]; loading: boolean } {
   const data = useLiveQuery(() => unlocksRepo.all(), []);
   return { unlocks: data ?? EMPTY, loading: data === undefined };
+}
+
+export function useTasks(): { tasks: Task[]; loading: boolean } {
+  const data = useLiveQuery(() => tasksRepo.all(), []);
+  return { tasks: data ?? EMPTY, loading: data === undefined };
 }

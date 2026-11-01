@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { AchievementUnlock, Note, Preset, Session, Subject } from '../domain/types';
+import type { AchievementUnlock, Note, Preset, Session, Subject, Task } from '../domain/types';
 
 /**
  * Local IndexedDB database. Bump the version and add an upgrade() when the schema changes,
@@ -11,6 +11,7 @@ export class LockInDB extends Dexie {
   presets!: Table<Preset, string>;
   notes!: Table<Note, string>;
   achievements!: Table<AchievementUnlock, string>;
+  tasks!: Table<Task, string>;
 
   constructor() {
     super('lock-in');
@@ -26,6 +27,10 @@ export class LockInDB extends Dexie {
     // v3 (Phase 3): achievement unlocks.
     this.version(3).stores({
       achievements: 'id, unlockedAt, seenAt, updatedAt',
+    });
+    // v4: planner tasks. Existing tables are untouched.
+    this.version(4).stores({
+      tasks: 'id, done, dueDate, subjectId, updatedAt',
     });
   }
 }

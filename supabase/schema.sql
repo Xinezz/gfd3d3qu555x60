@@ -4,7 +4,7 @@
 
 create table if not exists public.lockin_records (
   user_id    uuid   not null default auth.uid() references auth.users on delete cascade,
-  collection text   not null,             -- 'sessions', 'notes', 'subjects', 'presets', 'achievements', 'settings'
+  collection text   not null,             -- 'sessions', 'notes', 'subjects', 'presets', 'achievements', 'tasks', 'settings'
   id         text   not null,
   data       jsonb  not null,             -- the record exactly as the app stores it
   updated_at bigint not null,             -- the record's own updatedAt (ms); newest wins

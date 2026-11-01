@@ -24,6 +24,7 @@ export interface BackupFile {
   presets: BaseRecord[];
   notes: BaseRecord[];
   achievements: BaseRecord[];
+  tasks: BaseRecord[];
   settings: Record<string, unknown> | null;
 }
 
@@ -42,7 +43,7 @@ export function parseBackup(text: string): BackupFile {
   if (b?.format !== BACKUP_FORMAT) throw new Error('This is not a LOCK IN backup file.');
   if (typeof b.version !== 'number' || b.version > BACKUP_VERSION)
     throw new Error('This backup was made by a newer version of LOCK IN.');
-  for (const key of ['sessions', 'subjects', 'presets', 'notes', 'achievements'] as const) {
+  for (const key of ['sessions', 'subjects', 'presets', 'notes', 'achievements', 'tasks'] as const) {
     const list = b[key] ?? [];
     if (!Array.isArray(list) || !list.every(isRecord)) throw new Error(`The backup's ${key} look damaged.`);
   }
@@ -55,6 +56,7 @@ export function parseBackup(text: string): BackupFile {
     presets: b.presets ?? [],
     notes: b.notes ?? [],
     achievements: b.achievements ?? [],
+    tasks: b.tasks ?? [],
     settings: b.settings ?? null,
   };
 }

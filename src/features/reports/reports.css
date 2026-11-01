@@ -87,3 +87,33 @@
   .history__detail dd { margin-bottom: var(--s-2); }
   .reports__trend .card__head { flex-direction: column; align-items: flex-start; }
 }
+
+.history__rating { font-size: 0.5rem; letter-spacing: 2px; color: var(--accent); }
+.history__rating span { color: rgb(243 235 221 / 0.14); }
+
+/* Heatmap statistics */
+.heat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: var(--s-5) var(--s-4); margin: var(--s-6) 0 0; padding-top: var(--s-5); border-top: 1px solid var(--line); }
+.heat-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.heat-stats dt { font-size: var(--fs-label); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); }
+.heat-stats dd { margin: 0; font-size: 1.25rem; letter-spacing: -0.01em; color: var(--text); }
+.heat-stats dd small { font-size: var(--fs-xs); color: var(--text-3); }
+.heat-stats__up { color: var(--sage); }
+.heat-stats__down { color: var(--rose); }
+
+/* Focus quality */
+.focusq__top { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-6); flex-wrap: wrap; margin-bottom: var(--s-6); }
+.focusq__score { display: flex; flex-direction: column; gap: 2px; }
+.focusq__score .t-stat small { font-size: var(--fs-sm); color: var(--text-3); margin-left: 4px; }
+.focusq__week { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
+.focusq__week .num { font-size: 1.1rem; }
+.focusq__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-8); margin-top: var(--s-6); padding-top: var(--s-5); border-top: 1px solid var(--line); }
+.focusq__grid > div { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.focusq__times { gap: var(--s-3); }
+.focusq__distract { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.focusq__distract li { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
+.focusq__distract li:last-child { border-bottom: 0; }
+.focusq__distract li > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .focusq__grid { grid-template-columns: 1fr; }
+  .focusq__week { align-items: flex-start; text-align: left; }
+}

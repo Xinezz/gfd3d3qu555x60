@@ -213,3 +213,77 @@ function Row({ label, cells, onShow, onHide }: { label: string; cells: HeatCell[
     </>
   );
 }
+
+export interface RatingDatum {
+  key: string;
+  /** Axis label; empty string to skip (thinning). */
+  axis: string;
+  label: string;
+  /** Average 1–5 rating for the day, or null when nothing was rated. */
+  avg: number | null;
+  count: number;
+  current?: boolean;
+}
+
+/** Daily average focus rating on a fixed 1–5 scale. Unrated days leave a gap in the dots; the line joins rated days. */
+export function RatingChart({ data, height = 150 }: { data: RatingDatum[]; height?: number }) {
+  const { box, show, hide, node } = useTooltip();
+  const y = (v: number) => ((v - 1) / 4) * 100;
+  const rated = data.map((d, i) => ({ d, i })).filter(({ d }) => d.avg != null);
+  const points = rated.map(({ d, i }) => `${i + 0.5},${100 - y(d.avg!)}`).join(' ');
+  const tip = (d: RatingDatum) => [d.avg != null ? `${d.avg.toFixed(1)} / 5` : 'Not rated', d.count ? `${d.label} · ${d.count} rated ${d.count === 1 ? 'session' : 'sessions'}` : d.label] as const;
+
+  return (
+    <div className="chart" ref={box}>
+      <div className="rate-chart" style={{ height }} role="img" aria-label={`Daily average focus rating. ${rated.length} rated days in this range.`}>
+        <div className="col-chart__grid" aria-hidden>
+          {[1, 2, 3, 4, 5].map((v) => (
+            <div key={v} className="col-chart__tick" style={{ bottom: `${y(v)}%` }}>
+              <span>{v}</span>
+            </div>
+          ))}
+        </div>
+        {rated.length > 1 && (
+          <svg className="rate-chart__line" viewBox={`0 0 ${data.length} 100`} preserveAspectRatio="none" aria-hidden>
+            <polyline points={points} vectorEffect="non-scaling-stroke" />
+          </svg>
+        )}
+        <div className="rate-chart__plot">
+          {data.map((d) => (
+            <div
+              key={d.key}
+              className={`rate-col ${d.current ? 'is-current' : ''}`}
+              tabIndex={d.avg != null ? 0 : -1}
+              onPointerEnter={(e) => show(e.currentTarget.querySelector('.rate-dot') ?? e.currentTarget, ...tip(d))}
+              onPointerLeave={hide}
+              onFocus={(e) => show(e.currentTarget.querySelector('.rate-dot') ?? e.currentTarget, ...tip(d))}
+              onBlur={hide}
+              aria-label={`${d.label}: ${d.avg != null ? `${d.avg.toFixed(1)} out of 5` : 'not rated'}`}
+            >
+              {d.avg != null && <span className="rate-dot" style={{ bottom: `${y(d.avg)}%` }} />}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="col-chart__axis" aria-hidden>
+        {data.map((d) => (
+          <span key={d.key} className={d.current ? 'is-current' : undefined}>
+            {d.axis}
+          </span>
+        ))}
+      </div>
+      {node}
+      <table className="sr-only">
+        <caption>Daily average focus rating</caption>
+        <tbody>
+          {rated.map(({ d }) => (
+            <tr key={d.key}>
+              <th>{d.label}</th>
+              <td>{d.avg!.toFixed(1)} out of 5</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

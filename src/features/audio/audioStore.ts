@@ -145,6 +145,16 @@ export const audio = {
     updateSettings({ environmentId: id });
     if (state.ambienceOn) ambienceSynth.play(environmentById(id).sound, ambienceLevel());
   },
+  /** Switches the whole sound setup at once (session templates). Whatever is playing keeps playing, retuned. */
+  applySetup(next: { environmentId: string; musicId: string; customMusicUrl: string; musicVolume: number; ambienceVolume: number; ambienceOn: boolean }) {
+    const prev = getSettings();
+    updateSettings({ ...next, musicMuted: false, ambienceMuted: false });
+    musicSynth.setVolume(musicLevel());
+    youtube.setVolume(next.musicVolume, false);
+    if (state.musicOn && (prev.musicId !== next.musicId || prev.customMusicUrl !== next.customMusicUrl)) audio.playMusic();
+    if (!next.ambienceOn) audio.pauseAmbience();
+    else if (state.ambienceOn) ambienceSynth.play(environmentById(next.environmentId).sound, ambienceLevel());
+  },
 
   stopAll() {
     audio.pauseMusic();

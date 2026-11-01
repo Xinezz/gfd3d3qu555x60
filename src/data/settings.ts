@@ -10,6 +10,9 @@ const KEY = 'lockin.settings.v1';
 export const DEFAULT_SETTINGS: Settings = {
   displayName: '',
   dailyGoalMin: 120,
+  weeklyGoalMin: 0,
+  monthlyGoalMin: 0,
+  longTermGoals: [],
   presetId: 'builtin-25',
   focusMin: 25,
   breakMin: 5,

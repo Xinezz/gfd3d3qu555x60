@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Trash2 } from 'lucide-react';
 import type { Session, Subject } from '../../domain/types';
-import { bySubject, dailySeries, filterSessions, heatmap, monthlySeries, summary, weeklySeries, type Bucket, type ReportFilter } from '../../domain/reports';
+import { bySubject, dailySeries, filterSessions, FOCUS_LABELS, focusTrends, heatmap, heatmapStats, monthlySeries, summary, weeklySeries, type Bucket, type ReportFilter } from '../../domain/reports';
+import { streaks } from '../../domain/stats';
 import { addDays, dayKey, formatDate, formatDuration, formatHours, formatTimeOfDay, MINUTE, relativeDay } from '../../domain/time';
 import { useAllSubjects, useSessions, useSubjects } from '../../data/hooks';
 import { sessionsRepo } from '../../data/repo';
 import { useSettings } from '../../data/settings';
 import { confirmDialog, Segmented, toast } from '../../ui';
-import { ColumnChart, Heatmap, SubjectBars, type ColumnDatum } from '../../ui/charts/Charts';
+import { ColumnChart, Heatmap, RatingChart, SubjectBars, type ColumnDatum } from '../../ui/charts/Charts';
 import './reports.css';
 
 type Period = '7' | '30' | '90' | 'all' | 'custom';
@@ -173,7 +174,10 @@ export function ReportsPage() {
 
       <section className="card">
         <FitHeatmap sessions={bySubjectOnly} subjectName={subjectName} />
+        <HeatStats sessions={bySubjectOnly} />
       </section>
+
+      <FocusQuality sessions={bySubjectOnly} subjectName={subjectName} />
 
       <History sessions={filtered} subjectById={subjectById} />
     </div>
@@ -205,14 +209,152 @@ function FitHeatmap({ sessions, subjectName }: { sessions: Session[]; subjectNam
     <div ref={ref} style={{ ['--heat-cell' as string]: `${cell}px` }}>
       <div className="card__head">
         <div>
-          <h2>Consistency</h2>
+          <h2>Study heatmap</h2>
           <p className="faint small">
-            Last {weeks} weeks{subjectName ? ` · ${subjectName}` : ''}
+            Daily study time, last {weeks} weeks{subjectName ? ` · ${subjectName}` : ''}
           </p>
         </div>
       </div>
       <Heatmap grid={grid} />
     </div>
+  );
+}
+
+/** The numbers beside the heatmap. Always all-time (the subject filter still applies). */
+function HeatStats({ sessions }: { sessions: Session[] }) {
+  const h = useMemo(() => heatmapStats(sessions), [sessions]);
+  const st = useMemo(() => streaks(sessions), [sessions]);
+  const change = h.lastMonthToDateMs ? (h.thisMonthMs - h.lastMonthToDateMs) / h.lastMonthToDateMs : null;
+  const monthName = (offset: number) => new Date(new Date().getFullYear(), new Date().getMonth() + offset, 1).toLocaleDateString(undefined, { month: 'long' });
+  const date = new Date().getDate();
+  const sameDays = `${monthName(-1).slice(0, 3)} 1${date > 1 ? `–${date}` : ''}`;
+  return (
+    <dl className="heat-stats">
+      <div>
+        <dt>Total hours</dt>
+        <dd className="num">{formatHours(h.totalMs)}h</dd>
+        <span className="faint xsmall">
+          {h.activeDays} study {h.activeDays === 1 ? 'day' : 'days'}
+        </span>
+      </div>
+      <div>
+        <dt>Longest streak</dt>
+        <dd className="num">
+          {st.best} {st.best === 1 ? 'day' : 'days'}
+        </dd>
+        <span className="faint xsmall">Current: {st.current}</span>
+      </div>
+      <div>
+        <dt>Most productive day</dt>
+        <dd className="num">{h.bestDay ? formatDuration(h.bestDay.ms) : '–'}</dd>
+        <span className="faint xsmall">{h.bestDay ? formatDate(new Date(h.bestDay.key + 'T12:00').getTime(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'No sessions yet'}</span>
+      </div>
+      <div>
+        <dt>Best weekday</dt>
+        <dd>{h.bestWeekday ?? '–'}</dd>
+        <span className="faint xsmall">Most total focus</span>
+      </div>
+      <div>
+        <dt>Weekly consistency</dt>
+        <dd className="num">
+          {h.avgActiveDays.toFixed(1)} <small>/ 7 days</small>
+        </dd>
+        <span className="faint xsmall">{h.consistencyWeeks ? `Average over ${h.consistencyWeeks} ${h.consistencyWeeks === 1 ? "week" : "weeks"}` : "No recent sessions"}</span>
+      </div>
+      <div>
+        <dt>{monthName(0)}</dt>
+        <dd className="num" title={`${monthName(-1)} in full: ${formatDuration(h.lastMonthMs)}`}>{formatDuration(h.thisMonthMs)}</dd>
+        <span className={`xsmall ${change == null ? 'faint' : change >= 0 ? 'heat-stats__up' : 'heat-stats__down'}`}>
+          {change == null ? `Nothing on ${sameDays}` : `${change >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(change * 100))}% vs ${sameDays}`}
+        </span>
+      </div>
+    </dl>
+  );
+}
+
+/** Ratings from the optional "how focused were you?" question, and the patterns behind them. */
+function FocusQuality({ sessions, subjectName }: { sessions: Session[]; subjectName?: string }) {
+  const f = useMemo(() => focusTrends(sessions), [sessions]);
+  const data = f.daily.map((d, i, all) => ({
+    key: d.key,
+    axis: i % 5 === 4 || i === all.length - 1 ? formatDate(d.start) : '',
+    label: formatDate(d.start, { weekday: 'short', day: 'numeric', month: 'short' }),
+    avg: d.avg,
+    count: d.count,
+    current: d.current,
+  }));
+  const delta = f.last7 != null && f.prev7 != null ? f.last7 - f.prev7 : null;
+  // Only call out a best time once it rests on a few ratings, not a single lucky session.
+  const bestTime = f.byTime.filter((t) => t.count >= 3).sort((a, b) => b.avg! - a.avg!)[0];
+
+  return (
+    <section className="card focusq">
+      <div className="card__head">
+        <div>
+          <h2>Focus quality</h2>
+          <p className="faint small">From your 1–5 focus ratings{subjectName ? ` · ${subjectName}` : ''}</p>
+        </div>
+      </div>
+      {f.count === 0 ? (
+        <p className="empty">After a session, answer “How focused were you?” and your rating trends will appear here.</p>
+      ) : (
+        <>
+          <div className="focusq__top">
+            <div className="focusq__score">
+              <span className="t-stat num">
+                {f.overall!.toFixed(1)}
+                <small>/ 5</small>
+              </span>
+              <span className="small">{FOCUS_LABELS[Math.round(f.overall!) - 1]} on average</span>
+              <span className="faint xsmall">
+                {f.count} rated {f.count === 1 ? 'session' : 'sessions'}
+              </span>
+            </div>
+            <div className="focusq__week">
+              <span className="eyebrow">Last 7 days</span>
+              <span className="num">{f.last7 != null ? `${f.last7.toFixed(1)} / 5` : 'No ratings'}</span>
+              <span className={`xsmall ${delta == null ? 'faint' : delta >= 0 ? 'heat-stats__up' : 'heat-stats__down'}`}>
+                {delta == null ? (f.prev7 == null ? 'Nothing rated the week before' : '') : delta === 0 ? 'Same as the week before' : `${delta > 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)} vs the week before`}
+              </span>
+            </div>
+          </div>
+          <RatingChart data={data} />
+          <div className="focusq__grid">
+            <div>
+              <span className="eyebrow">By time of day{bestTime ? ` · best: ${bestTime.label.toLowerCase()}` : ''}</span>
+              <ul className="hbars focusq__times">
+                {f.byTime.map((t) => (
+                  <li key={t.id} className="hbar">
+                    <div className="hbar__label">
+                      <span className="hbar__name">{t.label}</span>
+                      <span className="hbar__value num">{t.avg != null ? `${t.avg.toFixed(1)} · ${t.count} rated` : '–'}</span>
+                    </div>
+                    <div className="hbar__track" aria-hidden>
+                      <i style={{ width: `${t.avg != null ? (t.avg / 5) * 100 : 0}%`, background: 'var(--accent)' }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <span className="eyebrow">What distracts you</span>
+              {f.distractions.length ? (
+                <ol className="focusq__distract">
+                  {f.distractions.map((d) => (
+                    <li key={d.text}>
+                      <span>{d.text}</span>
+                      <span className="num faint small">{d.n}×</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="faint small">Nothing noted yet. Answer “What distracted you?” after a session.</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -291,6 +433,12 @@ function History({ sessions, subjectById }: { sessions: Session[]; subjectById: 
                     </span>
                     <span className="history__meta">
                       {s.status === 'ended_early' && <span className="chip">Ended early</span>}
+                      {s.reflection?.focusRating ? (
+                        <span className="history__rating num" title={`Focus ${s.reflection.focusRating}/5: ${FOCUS_LABELS[s.reflection.focusRating - 1]}`}>
+                          {'●'.repeat(s.reflection.focusRating)}
+                          <span>{'●'.repeat(5 - s.reflection.focusRating)}</span>
+                        </span>
+                      ) : null}
                       <span className="num">{formatDuration(s.focusMs)}</span>
                       <ChevronDown size={16} className="history__chev" />
                     </span>
@@ -300,7 +448,10 @@ function History({ sessions, subjectById }: { sessions: Session[]; subjectById: 
                       <dl>
                         <Detail label="Task" value={s.task} />
                         <Detail label="Accomplished" value={s.reflection?.accomplished} />
-                        <Detail label="Intended task" value={s.reflection?.completedTask ? OUTCOME[s.reflection.completedTask] : undefined} />
+                        <Detail label="Objective" value={s.reflection?.completedTask ? OUTCOME[s.reflection.completedTask] : undefined} />
+                        <Detail label="Focus" value={s.reflection?.focusRating ? `${s.reflection.focusRating}/5 · ${FOCUS_LABELS[s.reflection.focusRating - 1]}` : undefined} />
+                        <Detail label="Learnt" value={s.reflection?.learnt} />
+                        <Detail label="Distracted by" value={s.reflection?.distractedBy} />
                         <Detail label="Next time" value={s.reflection?.nextTime} />
                         <Detail label="Planned" value={`${formatDuration(s.plannedMs)} · paused ${formatDuration(s.pausedMs)}`} />
                         {s.distractions.length > 0 && <Detail label="Parked thoughts" value={s.distractions.map((d) => `${d.done ? '✓' : '•'} ${d.text}`).join('\n')} />}

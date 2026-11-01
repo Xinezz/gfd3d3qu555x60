@@ -14,6 +14,7 @@ import { CUSTOM_MUSIC_ID, MUSIC } from '../audio/catalog';
 import { COMPANIONS } from '../companions/Companions';
 import { ENVIRONMENTS } from '../scenes/catalog';
 import { room, useRoom } from '../session/sessionStore';
+import { applyTemplate, currentSetup, describe, isTemplate, startTemplate } from './templates';
 
 export type PanelId = 'timer' | 'music' | 'scene' | 'companion' | 'decor' | 'thoughts';
 
@@ -43,6 +44,8 @@ export function TimerPanel() {
   const [name, setName] = useState('');
   const locked = timer.status !== 'idle';
 
+  const presets = custom.filter((p) => !isTemplate(p));
+  const templates = custom.filter(isTemplate);
   const pick = (p: Preset) => applyTimer(p.focusMin, p.breakMin, p.id);
   const save = async () => {
     const n = name.trim() || `${s.focusMin} / ${s.breakMin}`;
@@ -61,10 +64,11 @@ export function TimerPanel() {
   return (
     <div className="stack">
       {locked && <p className="note">Finish or reset the current session to change its length.</p>}
+      <Templates templates={templates} locked={locked} activeId={s.presetId} onRemove={(p) => void remove(p)} />
       <section className="stack-s">
-        <h3 className="eyebrow">Presets</h3>
+        <h3 className="eyebrow">Timer presets</h3>
         <div className="preset-grid">
-          {[...BUILT_IN_PRESETS, ...custom].map((p) => (
+          {[...BUILT_IN_PRESETS, ...presets].map((p) => (
             <div key={p.id} className={`preset ${s.presetId === p.id ? 'is-active' : ''}`}>
               <button className="preset__main" disabled={locked} onClick={() => pick(p)}>
                 <span className="preset__time num">
@@ -102,6 +106,89 @@ export function TimerPanel() {
         </section>
       )}
     </div>
+  );
+}
+
+/** Saved setups: timer, scene, companion, music, volumes and Lights Off, started in one click. */
+function Templates({ templates, locked, activeId, onRemove }: { templates: Preset[]; locked: boolean; activeId: string | null; onRemove: (p: Preset) => void }) {
+  const s = useSettings();
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState('');
+  const [lightsOff, setLightsOff] = useState(false);
+  const setup = currentSetup(lightsOff);
+
+  const save = async () => {
+    const n = name.trim();
+    if (!n) {
+      toast('Give the template a name, e.g. “Evening revision”.');
+      return;
+    }
+    const rec = await presetsRepo.put(newRecord({ name: n, ...currentSetup(lightsOff) }));
+    updateSettings({ presetId: rec.id });
+    setName('');
+    setLightsOff(false);
+    setSaving(false);
+    toast(`Saved template “${n}”`);
+  };
+
+  return (
+    <section className="stack-s">
+      <h3 className="eyebrow">Session templates</h3>
+      {templates.length === 0 && !saving && <p className="faint small">Save this room as it is now (timer, scene, music, companion and volumes) and start it again in one click.</p>}
+      {templates.length > 0 && (
+        <ul className="templates">
+          {templates.map((t) => (
+            <li key={t.id} className={`template ${activeId === t.id ? 'is-active' : ''}`}>
+              <div className="template__text">
+                <strong>
+                  {t.name}
+                  {t.lightsOff && <MoonIcon size={12} aria-label="Starts in Lights Off" />}
+                </strong>
+                <span className="faint xsmall">{describe(t)}</span>
+              </div>
+              <div className="template__actions">
+                <button className="btn btn--sm btn--primary" disabled={locked} onClick={() => startTemplate(t, true)} title="Apply and start focusing">
+                  <Play size={12} fill="currentColor" /> Start
+                </button>
+                <button
+                  className="btn btn--sm btn--ghost"
+                  disabled={locked}
+                  onClick={() => {
+                    if (applyTemplate(t)) toast(`“${t.name}” is set up. Start when you're ready.`);
+                  }}
+                >
+                  Apply
+                </button>
+                <button className="icon-btn icon-btn--ghost template__del" onClick={() => onRemove(t)} aria-label={`Delete template ${t.name}`}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {saving ? (
+        <div className="template-save">
+          <input className="input" autoFocus placeholder="Template name, e.g. Evening revision" value={name} maxLength={32} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void save()} />
+          <p className="faint xsmall">
+            Saves: {describe(setup)} · music {Math.round(setup.musicVolume * 100)}% · room sound {setup.ambienceOn ? `${Math.round(setup.ambienceVolume * 100)}%` : 'off'}
+          </p>
+          <Toggle label="Start in Lights Off" hint={s.lightsOffFullscreen ? 'Goes full screen too (Esc turns the lights back on)' : undefined} checked={lightsOff} onChange={setLightsOff} />
+          <div className="row">
+            <button className="btn btn--primary btn--sm" onClick={() => void save()}>
+              Save template
+            </button>
+            <button className="btn btn--ghost btn--sm" onClick={() => setSaving(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="btn btn--sm template-add" onClick={() => setSaving(true)}>
+          Save current setup as a template
+        </button>
+      )}
+    </section>
   );
 }
 

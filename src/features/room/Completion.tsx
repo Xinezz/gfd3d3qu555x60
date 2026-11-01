@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { BookOpen, Check, Coffee } from 'lucide-react';
+import { BookOpen, Check, Coffee, ListChecks } from 'lucide-react';
 import type { Distraction, Session, TaskOutcome } from '../../domain/types';
 import { formatDuration } from '../../domain/time';
 import { todayStats } from '../../domain/stats';
-import { sessionsRepo } from '../../data/repo';
-import { useSessions } from '../../data/hooks';
+import { sessionsRepo, tasksRepo } from '../../data/repo';
+import { useSessions, useTasks } from '../../data/hooks';
+import { taskProgress } from '../../domain/planner';
+import { FOCUS_LABELS } from '../../domain/reports';
 import { Segmented, toast } from '../../ui';
 import { getRoom, room, useRoom } from '../session/sessionStore';
 import { SubjectPicker } from './SubjectPicker';
@@ -33,6 +35,14 @@ function CompletionForm({ session }: { session: Session }) {
   const [accomplished, setAccomplished] = useState(session.reflection?.accomplished ?? '');
   const [completedTask, setCompletedTask] = useState<TaskOutcome | null>(session.reflection?.completedTask ?? null);
   const [nextTime, setNextTime] = useState(session.reflection?.nextTime ?? '');
+  const [focusRating, setFocusRating] = useState<number | null>(session.reflection?.focusRating ?? null);
+  const [distractedBy, setDistractedBy] = useState(session.reflection?.distractedBy ?? '');
+  const [learnt, setLearnt] = useState(session.reflection?.learnt ?? '');
+  const { tasks } = useTasks();
+  const linked = session.taskId ? tasks.find((t) => t.id === session.taskId) : undefined;
+  // null = follow the "did you achieve it?" answer until the box is touched.
+  const [markDone, setMarkDone] = useState<boolean | null>(null);
+  const willMarkDone = markDone ?? completedTask === 'yes';
   const [distractions, setDistractions] = useState<Distraction[]>(session.distractions);
   const [saving, setSaving] = useState(false);
   const today = todayStats(sessions);
@@ -48,9 +58,13 @@ function CompletionForm({ session }: { session: Session }) {
         subjectId,
         task: task.trim(),
         distractions,
-        reflection: { accomplished: accomplished.trim(), completedTask, nextTime: nextTime.trim() },
+        reflection: { accomplished: accomplished.trim(), completedTask, nextTime: nextTime.trim(), focusRating, distractedBy: distractedBy.trim(), learnt: learnt.trim() },
       });
-      toast('Reflection saved');
+      if (linked && !linked.done && willMarkDone) {
+        await tasksRepo.patch(linked.id, { done: true, completedAt: Date.now() });
+        room.releaseTask(linked.id, linked.title);
+        toast(`Reflection saved · “${linked.title}” completed`);
+      } else toast('Reflection saved');
       setStep('next');
     } catch {
       toast("Couldn't save the reflection. Please try again.");
@@ -122,18 +136,53 @@ function CompletionForm({ session }: { session: Session }) {
               <input className="input" value={task} onChange={(e) => setTask(e.target.value)} placeholder="What you set out to do" />
             </label>
           </div>
-          <div className="field">
-            <span>Did you complete your intended task?</span>
-            <Segmented
-              label="Completed task"
-              value={completedTask}
-              onChange={setCompletedTask}
-              options={[
-                { value: 'yes', label: 'Yes' },
-                { value: 'partly', label: 'Partly' },
-                { value: 'no', label: 'Not yet' },
-              ]}
-            />
+          {linked && (
+            <div className="completion__task">
+              <ListChecks size={16} />
+              <div>
+                <span className="small">
+                  Counted toward <strong>{linked.title}</strong>
+                </span>
+                <span className="faint xsmall num">{taskLine(taskProgress(linked, sessions))}</span>
+              </div>
+              {linked.done ? (
+                <span className="chip">Already done</span>
+              ) : (
+                <label className="completion__check">
+                  <input type="checkbox" checked={willMarkDone} onChange={(e) => setMarkDone(e.target.checked)} />
+                  Mark task done
+                </label>
+              )}
+            </div>
+          )}
+          <div className="completion__pair">
+            <div className="field">
+              <span>Did you achieve your objective?</span>
+              <Segmented
+                label="Achieved objective"
+                value={completedTask}
+                onChange={setCompletedTask}
+                options={[
+                  { value: 'yes', label: 'Yes' },
+                  { value: 'partly', label: 'Partly' },
+                  { value: 'no', label: 'Not yet' },
+                ]}
+              />
+            </div>
+            <div className="field">
+              <span>How focused were you?</span>
+              <FocusRating value={focusRating} onChange={setFocusRating} />
+            </div>
+          </div>
+          <div className="grid-2">
+            <label className="field">
+              <span>What did you learn?</span>
+              <textarea className="textarea completion__short" value={learnt} onChange={(e) => setLearnt(e.target.value)} placeholder="e.g. How to pick u and dv" />
+            </label>
+            <label className="field">
+              <span>What distracted you?</span>
+              <textarea className="textarea completion__short" value={distractedBy} maxLength={200} onChange={(e) => setDistractedBy(e.target.value)} placeholder="e.g. Phone, noise, nothing" />
+            </label>
           </div>
           <label className="field">
             <span>What should you continue with next time?</span>
@@ -167,6 +216,27 @@ function CompletionForm({ session }: { session: Session }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+const taskLine = (p: ReturnType<typeof taskProgress>) =>
+  `${formatDuration(p.spentMs)}${p.estimateMs ? ` of ${formatDuration(p.estimateMs)}` : ''} across ${p.sessions} ${p.sessions === 1 ? 'session' : 'sessions'}`;
+
+
+/** 1–5 focus rating. Optional: clicking the chosen value again clears it. */
+function FocusRating({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+  return (
+    <div className="focus-rating" role="radiogroup" aria-label="Focus rating">
+      {FOCUS_LABELS.map((label, i) => {
+        const v = i + 1;
+        return (
+          <button key={v} type="button" role="radio" aria-checked={value === v} className={value != null && v <= value ? 'is-on' : undefined} title={label} aria-label={`${v}: ${label}`} onClick={() => onChange(value === v ? null : v)}>
+            <span className="num">{v}</span>
+          </button>
+        );
+      })}
+      <span className="focus-rating__label faint small">{value ? FOCUS_LABELS[value - 1] : 'Optional'}</span>
     </div>
   );
 }

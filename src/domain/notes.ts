@@ -44,6 +44,7 @@ export function suggestionsFromSession(s: Session) {
   return {
     lastStudied: s.dayKey,
     whereStopped: s.reflection?.accomplished || s.task || '',
+    learnt: s.reflection?.learnt ?? '',
     nextSteps: s.reflection?.nextTime ?? '',
   };
 }

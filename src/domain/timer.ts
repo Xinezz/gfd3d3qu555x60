@@ -26,6 +26,8 @@ export interface LiveTimer {
   breakMin: number;
   subjectId: ID | null;
   task: string;
+  /** Linked planner task, if one was picked. */
+  taskId: ID | null;
   distractions: Distraction[];
 }
 
@@ -34,7 +36,7 @@ export interface TimerConfig {
   breakMin: number;
 }
 
-export function idleTimer(cfg: TimerConfig, keep?: Pick<LiveTimer, 'subjectId' | 'task'>): LiveTimer {
+export function idleTimer(cfg: TimerConfig, keep?: Pick<LiveTimer, 'subjectId' | 'task'> & { taskId?: ID | null }): LiveTimer {
   return {
     id: uid(),
     phase: 'focus',
@@ -48,6 +50,7 @@ export function idleTimer(cfg: TimerConfig, keep?: Pick<LiveTimer, 'subjectId' |
     breakMin: cfg.breakMin,
     subjectId: keep?.subjectId ?? null,
     task: keep?.task ?? '',
+    taskId: keep?.taskId ?? null,
     distractions: [],
   };
 }

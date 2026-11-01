@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Download, FileJson, Trash2, Upload } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { formatDuration, MINUTE, relativeDay } from '../../domain/time';
@@ -10,6 +11,7 @@ import { deleteAllData, downloadBackup, downloadSessionsCsv, importBackup } from
 import { confirmDialog, Stepper, toast, Toggle } from '../../ui';
 import { deleteCloudData, getSyncState, uploadEverything } from '../../sync/syncStore';
 import { AccountSection } from './AccountSection';
+import { describe, isTemplate } from '../room/templates';
 import './settings.css';
 
 const LAST_BACKUP_KEY = 'lockin.lastBackup';
@@ -45,7 +47,13 @@ export function SettingsPage() {
 
       <section className="card">
         <h2>Daily goal</h2>
-        <p className="muted small">How much focused time you aim for each day. Shown on your dashboard.</p>
+        <p className="muted small">
+          How much focused time you aim for each day. Shown on your dashboard. Weekly, monthly and long-term goals live in the{' '}
+          <Link to="/planner" className="link">
+            Planner
+          </Link>
+          .
+        </p>
         <div className="settings__row">
           <Stepper label="Daily goal" unit="min" value={s.dailyGoalMin} min={10} max={720} onChange={(v) => updateSettings({ dailyGoalMin: v })} />
           <span className="faint">= {formatDuration(s.dailyGoalMin * MINUTE)} a day</span>
@@ -142,14 +150,16 @@ function PresetsSection() {
   if (!presets.length) return null;
   return (
     <section className="card">
-      <h2>Your timer presets</h2>
+      <h2>Your presets and templates</h2>
+      <p className="muted small">Create them from the Timer panel in the Lock-In Room. Templates also remember the scene, music, companion, volumes and Lights Off.</p>
       <ul className="settings__list">
         {presets.map((p) => (
           <li key={p.id}>
-            <span className="settings__grow">{p.name}</span>
-            <span className="faint num">
-              {p.focusMin} / {p.breakMin} min
+            <span className="settings__grow">
+              {p.name}
+              {isTemplate(p) && <span className="chip settings__chip">Template</span>}
             </span>
+            <span className="faint small">{isTemplate(p) ? describe(p) : `${p.focusMin} / ${p.breakMin} min`}</span>
             <button
               className="icon-btn icon-btn--ghost"
               aria-label={`Delete preset ${p.name}`}
@@ -174,6 +184,7 @@ function DataSection() {
     sessions: await db.sessions.filter((r) => !r.deletedAt).count(),
     subjects: await db.subjects.filter((r) => !r.deletedAt).count(),
     notes: await db.notes.filter((r) => !r.deletedAt).count(),
+    tasks: await db.tasks.filter((r) => !r.deletedAt).count(),
   }));
   const [persistent, setPersistent] = useState<boolean | null>(null);
   const [lastBackup, setLastBackup] = useState(() => Number(localStorage.getItem(LAST_BACKUP_KEY)) || 0);
@@ -193,7 +204,7 @@ function DataSection() {
   const onImport = async (file: File) => {
     try {
       const r = await importBackup(await file.text());
-      toast(`Imported ${r.sessions} sessions, ${r.notes} notes, ${r.subjects} subjects, ${r.presets} presets`, 4500);
+      toast(`Imported ${r.sessions} sessions, ${r.notes} notes, ${r.tasks} tasks, ${r.subjects} subjects, ${r.presets} presets`, 4500);
       uploadEverything();
     } catch (e) {
       toast((e as Error).message, 5000);
@@ -206,8 +217,8 @@ function DataSection() {
     const first = await confirmDialog({
       title: 'Delete all study data?',
       body: getSyncState().userId
-        ? 'Every session, reflection, note, achievement, subject and preset will be permanently removed from this browser AND your cloud account. Other signed-in devices keep their local copies until you clear them there. Export a backup first if you might want it back.'
-        : 'Every session, reflection, note, achievement, subject and preset in this browser will be permanently removed. Export a backup first if you might want it back.',
+        ? 'Every session, reflection, note, task, achievement, subject and preset will be permanently removed from this browser AND your cloud account. Other signed-in devices keep their local copies until you clear them there. Export a backup first if you might want it back.'
+        : 'Every session, reflection, note, task, achievement, subject and preset in this browser will be permanently removed. Export a backup first if you might want it back.',
       confirmLabel: 'Continue',
       danger: true,
     });
@@ -228,7 +239,7 @@ function DataSection() {
     <section className="card">
       <h2>Your data</h2>
       <p className="muted small">
-        Everything is stored privately in this browser on this device ({counts?.sessions ?? 0} sessions, {counts?.notes ?? 0} notes, {counts?.subjects ?? 0} subjects). Clearing your browser's site data would erase it, so export a backup now and then.
+        Everything is stored privately in this browser on this device ({counts?.sessions ?? 0} sessions, {counts?.notes ?? 0} notes, {counts?.tasks ?? 0} tasks, {counts?.subjects ?? 0} subjects). Clearing your browser's site data would erase it, so export a backup now and then.
       </p>
       <div className="settings__status">
         <span>

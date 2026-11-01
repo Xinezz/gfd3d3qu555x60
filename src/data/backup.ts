@@ -1,4 +1,4 @@
-import type { AchievementUnlock, Note, Preset, Session, Subject } from '../domain/types';
+import type { AchievementUnlock, Note, Preset, Session, Subject, Task } from '../domain/types';
 import { dayKey } from '../domain/time';
 import { db } from './db';
 import { BACKUP_FORMAT, BACKUP_VERSION, parseBackup, recordsToWrite, type BackupFile } from './merge';
@@ -6,12 +6,13 @@ import { getSettings, replaceSettings } from './settings';
 
 /** Full export, including soft-deleted rows so a restore reproduces the exact state. */
 export async function exportBackup(): Promise<BackupFile> {
-  const [sessions, subjects, presets, notes, achievements] = await Promise.all([
+  const [sessions, subjects, presets, notes, achievements, tasks] = await Promise.all([
     db.sessions.toArray(),
     db.subjects.toArray(),
     db.presets.toArray(),
     db.notes.toArray(),
     db.achievements.toArray(),
+    db.tasks.toArray(),
   ]);
   return {
     format: BACKUP_FORMAT,
@@ -22,6 +23,7 @@ export async function exportBackup(): Promise<BackupFile> {
     presets,
     notes,
     achievements,
+    tasks,
     settings: { ...getSettings() },
   };
 }
@@ -78,12 +80,13 @@ export interface ImportResult {
   presets: number;
   notes: number;
   achievements: number;
+  tasks: number;
 }
 
 /** Merges a backup into current data; newer records win, nothing is deleted. */
 export async function importBackup(text: string): Promise<ImportResult> {
   const backup = parseBackup(text);
-  return db.transaction('rw', [db.sessions, db.subjects, db.presets, db.notes, db.achievements], async () => {
+  return db.transaction('rw', [db.sessions, db.subjects, db.presets, db.notes, db.achievements, db.tasks], async () => {
     const sessions = recordsToWrite(await db.sessions.toArray(), backup.sessions as Session[]);
     const subjects = recordsToWrite(await db.subjects.toArray(), backup.subjects as Subject[]);
     const presets = recordsToWrite(await db.presets.toArray(), backup.presets as Preset[]);
@@ -95,14 +98,16 @@ export async function importBackup(text: string): Promise<ImportResult> {
     await db.presets.bulkPut(presets);
     await db.notes.bulkPut(notes);
     await db.achievements.bulkPut(achievements);
+    const tasks = recordsToWrite(await db.tasks.toArray(), backup.tasks as Task[]);
+    await db.tasks.bulkPut(tasks);
     const s = backup.settings as { updatedAt?: number } | null;
     if (s && (s.updatedAt ?? 0) > getSettings().updatedAt) replaceSettings(s);
-    return { sessions: sessions.length, subjects: subjects.length, presets: presets.length, notes: notes.length, achievements: achievements.length };
+    return { sessions: sessions.length, subjects: subjects.length, presets: presets.length, notes: notes.length, achievements: achievements.length, tasks: tasks.length };
   });
 }
 
 export async function deleteAllData() {
-  await db.transaction('rw', [db.sessions, db.subjects, db.presets, db.notes, db.achievements], async () => {
-    await Promise.all([db.sessions.clear(), db.subjects.clear(), db.presets.clear(), db.notes.clear(), db.achievements.clear()]);
+  await db.transaction('rw', [db.sessions, db.subjects, db.presets, db.notes, db.achievements, db.tasks], async () => {
+    await Promise.all([db.sessions.clear(), db.subjects.clear(), db.presets.clear(), db.notes.clear(), db.achievements.clear(), db.tasks.clear()]);
   });
 }

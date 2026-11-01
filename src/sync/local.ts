@@ -10,6 +10,7 @@ const TABLES: Record<string, Table<SyncRecord, string>> = {
   presets: db.presets as unknown as Table<SyncRecord, string>,
   notes: db.notes as unknown as Table<SyncRecord, string>,
   achievements: db.achievements as unknown as Table<SyncRecord, string>,
+  tasks: db.tasks as unknown as Table<SyncRecord, string>,
 };
 const SETTINGS = 'settings';
 

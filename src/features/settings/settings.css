@@ -23,6 +23,7 @@
 .settings__list li { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--line); }
 .settings__list li:last-child { border-bottom: 0; }
 .settings__grow { flex: 1; }
+.settings__chip { margin-left: var(--s-2); }
 .swatch { width: 18px; height: 18px; border-radius: var(--r-xs); border: 0; box-shadow: 0 0 0 2px rgb(0 0 0 / 0.25) inset; cursor: pointer; flex: none; transition: transform var(--dur-1); }
 .swatch:hover { transform: scale(1.15); }
 .input--bare { flex: 1; background: transparent; border-color: transparent; padding-left: var(--s-2); }

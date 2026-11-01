@@ -15,6 +15,7 @@ import { SettingsPage } from './features/settings/SettingsPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { NotesPage } from './features/notes/NotesPage';
 import { AchievementsPage } from './features/achievements/AchievementsPage';
+import { PlannerPage } from './features/planner/PlannerPage';
 import { requestPersistentStorage } from './data/db';
 
 // Hash routing works on any static host (GitHub Pages included) with no server config.
@@ -24,6 +25,7 @@ const router = createHashRouter([
     children: [
       { path: '/', element: <Dashboard /> },
       { path: '/room', element: <Room /> },
+      { path: '/planner', element: <PlannerPage /> },
       { path: '/reports', element: <ReportsPage /> },
       { path: '/notes', element: <NotesPage /> },
       { path: '/achievements', element: <AchievementsPage /> },

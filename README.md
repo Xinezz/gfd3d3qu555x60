@@ -21,13 +21,14 @@ The built site must be served over http(s). Opening `dist/index.html` directly f
 | 2 | Focus Reports (stats, daily/weekly/monthly + subject charts, consistency heatmap, filterable history), Study Notes (search, subject/status filters, update-from-reflection) | **Done** |
 | 3 | Achievements: 24 across hours, long-term milestones, consistency, sessions and deep work; unlock celebrations (legendary for 1,000h); the road to 1,000 hours; unlock history | **Done** |
 | 4 | Rewards earned through achievements (no currency): 10 room decorations, 4 unlockable environments, 3 new companions (1 free); rewards gallery; optional Supabase account sync | **Done** (sync needs the one-time Supabase setup below) |
+| Smart study management | Planner (tasks with subject, deadline, estimate, priority; sessions count toward tasks), daily/weekly/monthly/long-term goals, Continue where you left off, study heatmap statistics, session templates, focus-quality ratings and trends | **Done** |
 
 ## Architecture
 
 ```
 src/
   domain/     Pure logic + types, no browser APIs. Unit-tested.
-              timer.ts (timestamp-based), stats.ts, reports.ts, notes.ts, achievements.ts, rewards.ts, milestones.ts, presets.ts, time.ts
+              timer.ts (timestamp-based), stats.ts, reports.ts, notes.ts, planner.ts, achievements.ts, rewards.ts, milestones.ts, presets.ts, time.ts
   data/       Storage boundary. db.ts (IndexedDB via Dexie, versioned schema),
               repo.ts (Repo<T> interface), hooks.ts (live queries),
               settings.ts (localStorage prefs), backup.ts / merge.ts (export/import)
@@ -36,8 +37,9 @@ src/
     audio/      YouTube music channel, Web Audio ambience synth, audio store
     scenes/     10 animated environments (CSS/SVG/canvas, no image assets)
     companions/ Timer ring, candle, plant
-    room/       Lock-In Room page, side panels, completion/reflection
-    dashboard/  Mission Control
+    room/       Lock-In Room page, side panels, completion/reflection, task picker, session templates
+    planner/    Tasks + study goals
+    dashboard/  Mission Control, Continue where you left off, Up next
     reports/    Focus Reports
     notes/      Study Notes + editor
     achievements/ Collection page, badges, unlock watcher + celebrations
@@ -54,6 +56,7 @@ src/
 - **Saving**: a finished session is written into the snapshot (`pendingSave`) first, then to IndexedDB. Saves are keyed by session id, so retrying is always safe.
 - **Sync-ready records**: every record has `id`, `createdAt`, `updatedAt` and a soft-delete `deletedAt`. A future cloud sync can merge devices last-write-wins, using the same function backup import uses (`data/merge.ts`).
 - **Backups**: Settings → Your data offers JSON backup, CSV export of sessions, and import (merge).
+- **Planner data**: tasks live in IndexedDB `tasks` (schema v4, added without touching existing tables) and are included in backups and sync. A session stores the `taskId` it counted toward; deleting a task never deletes its sessions. Goals are only targets in settings: progress is always computed from saved sessions, so changing or removing a goal can't erase history or achievements.
 
 ## Design system
 Cozy dark academia with premium minimalism. Everything comes from tokens in `src/styles/global.css`. Pages never hard-code their own colours, sizes or timings.

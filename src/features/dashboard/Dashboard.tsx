@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, Play, SlidersHorizontal } from 'lucide-react';
-import type { Note, Session, Subject } from '../../domain/types';
-import { filterNotes } from '../../domain/notes';
+import { ArrowRight, Moon, Play, SlidersHorizontal } from 'lucide-react';
+import type { Session, Subject } from '../../domain/types';
 import { BUILT_IN_PRESETS } from '../../domain/presets';
 import { currentWeekDays, monthFocusMs, recentSessions, streaks, todayStats, weekFocusMs } from '../../domain/stats';
 import { ACHIEVEMENTS, progressLabel, progressOf, unlockTimeline } from '../../domain/achievements';
 import { formatClock, formatDuration, formatHours, formatTimeOfDay, MINUTE, relativeDay } from '../../domain/time';
 import { remainingMs } from '../../domain/timer';
-import { useAllSubjects, useNotes, useSessions, useUnlocks } from '../../data/hooks';
+import { useAllSubjects, useCustomPresets, useNotes, useSessions, useSubjects, useTasks, useUnlocks } from '../../data/hooks';
 import { sessionsRepo } from '../../data/repo';
 import { updateSettings, useSettings } from '../../data/settings';
 import { useNow } from '../../ui';
@@ -16,6 +15,8 @@ import { Pixel } from '../../ui/Pixel';
 import { Badge } from '../achievements/Badge';
 import { environmentById } from '../scenes/catalog';
 import { room, useRoom } from '../session/sessionStore';
+import { ContinueStudying, UpNext } from './ContinueStudying';
+import { describe, isTemplate, startTemplate } from '../room/templates';
 import './dashboard.css';
 
 function greeting(h: number) {
@@ -28,7 +29,9 @@ function greeting(h: number) {
 export function Dashboard() {
   const { sessions, loading } = useSessions();
   const subjects = useAllSubjects();
+  const liveSubjects = useSubjects();
   const { notes } = useNotes();
+  const { tasks } = useTasks();
   const settings = useSettings();
   const now = useNow(true, 60_000);
 
@@ -94,6 +97,8 @@ export function Dashboard() {
         <Stat label="Lifetime" value={formatHours(stats.metrics.focusMs)} unit="h" sub={`${stats.metrics.completedSessions} full sessions`} />
       </section>
 
+      <ContinueStudying subjects={liveSubjects} notes={notes} sessions={sessions} now={now} />
+
       <div className="dash-row">
         <WeekChart days={stats.days} goalMs={goalMs} total={stats.week} />
         <NextAchievement sessions={sessions} />
@@ -102,7 +107,7 @@ export function Dashboard() {
       <div className="dash-row dash-row--wide">
         <Recent sessions={stats.recent} subjects={subjects} />
         <div className="dash-side">
-          <ContinueNotes notes={notes} subjects={subjects} />
+          <UpNext tasks={tasks} subjects={subjects} sessions={sessions} now={now} />
           <ParkedThoughts sessions={sessions} />
         </div>
       </div>
@@ -130,6 +135,7 @@ function StartArea() {
   const navigate = useNavigate();
   const { timer } = useRoom();
   const settings = useSettings();
+  const templates = useCustomPresets().filter(isTemplate);
   useNow(timer.status === 'running', 1000);
   const env = environmentById(settings.environmentId);
 
@@ -171,6 +177,19 @@ function StartArea() {
           <button key={p.id} className="dash-quick" onClick={() => go(p.focusMin, p.breakMin, p.id)} title={`${p.focusMin} min focus, ${p.breakMin} min break`}>
             <span className="num">{p.focusMin}</span>
             <span>min</span>
+          </button>
+        ))}
+        {templates.map((t) => (
+          <button
+            key={t.id}
+            className="dash-quick dash-quick--template"
+            title={`Start “${t.name}”: ${describe(t)}${t.lightsOff ? ' · Lights Off' : ''}`}
+            onClick={() => {
+              if (startTemplate(t, false)) navigate(t.lightsOff ? '/room?lights=off' : '/room');
+            }}
+          >
+            {t.lightsOff && <Moon size={12} />}
+            <span>{t.name}</span>
           </button>
         ))}
         <Link to="/room?panel=timer" className="dash-quick" title="Choose your own length">
@@ -329,39 +348,6 @@ function Recent({ sessions, subjects }: { sessions: Session[]; subjects: Subject
           })}
         </ol>
       )}
-    </section>
-  );
-}
-
-/** The latest in-progress topics, so you can see where you stopped before you start. */
-function ContinueNotes({ notes, subjects }: { notes: Note[]; subjects: Subject[] }) {
-  const open = filterNotes(notes, { status: 'in_progress' }).slice(0, 3);
-  if (!open.length) return null;
-  const byId = new Map(subjects.map((s) => [s.id, s]));
-  return (
-    <section className="dash-notes">
-      <div className="section__head">
-        <div>
-          <span className="eyebrow">Notebook</span>
-          <h2>Pick up where you left off</h2>
-        </div>
-      </div>
-      <div className="dash-notes__list">
-        {open.map((n) => {
-          const subj = n.subjectId ? byId.get(n.subjectId) : undefined;
-          return (
-            <Link key={n.id} to={`/notes?subject=${n.subjectId ?? 'none'}`} className="dash-note">
-              <span className="dash-note__subject">
-                <span className="dot" style={{ background: subj?.color ?? 'var(--text-3)' }} />
-                {subj?.name ?? 'No subject'}
-              </span>
-              <strong>{n.topic}</strong>
-              <span className="dash-note__next">{n.nextSteps || n.whereStopped || 'No next step written yet'}</span>
-              <ArrowUpRight size={15} className="dash-note__arrow" />
-            </Link>
-          );
-        })}
-      </div>
     </section>
   );
 }

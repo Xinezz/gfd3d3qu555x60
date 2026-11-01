@@ -5,7 +5,7 @@ import * as T from '../../domain/timer';
 import { formatClock, formatDuration } from '../../domain/time';
 import { todayStats, totalFocusMs } from '../../domain/stats';
 import { useSessions, useSubjects } from '../../data/hooks';
-import { useSettings } from '../../data/settings';
+import { getSettings, useSettings } from '../../data/settings';
 import { confirmDialog, lightsOffStore, toast, useNow } from '../../ui';
 import { audio, playerExpanded, useAudio } from '../audio/audioStore';
 import { Companion } from '../companions/Companions';
@@ -14,9 +14,11 @@ import { DecorLayer } from '../rewards/Decor';
 import { useRewards } from '../rewards/useRewards';
 import { COMPANIONS } from '../companions/Companions';
 import { environmentById } from '../scenes/catalog';
-import { onSessionEvent, room, useRoom } from '../session/sessionStore';
+import { getRoom, onSessionEvent, room, useRoom } from '../session/sessionStore';
 import { CompanionPanel, DecorPanel, MusicPanel, Panel, ScenePanel, ThoughtsPanel, TimerPanel, type PanelId } from './panels';
 import { SubjectPicker } from './SubjectPicker';
+import { enterLightsOff, exitLightsOff } from './lightsOff';
+import { LinkedTask, TaskPickerButton } from './TaskLink';
 import './room.css';
 
 const PANELS: { id: PanelId; label: string; icon: typeof Clock }[] = [
@@ -32,22 +34,6 @@ const isTyping = (e: KeyboardEvent) => {
   const el = e.target as HTMLElement;
   return el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
 };
-
-async function enterLightsOff(fullscreen: boolean) {
-  lightsOffStore.set(true);
-  if (fullscreen && !document.fullscreenElement) {
-    try {
-      await document.documentElement.requestFullscreen();
-    } catch {
-      /* fullscreen refused (e.g. iOS Safari): lights-off still works without it */
-    }
-  }
-}
-
-function exitLightsOff() {
-  lightsOffStore.set(false);
-  if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
-}
 
 export function Room() {
   const { timer, reviewId } = useRoom();
@@ -95,6 +81,12 @@ export function Room() {
 
   // Leaving the page or the browser leaving fullscreen also turns the lights back on.
   useEffect(() => () => exitLightsOff(), []);
+  // A template started elsewhere asks for Lights Off as the room opens (still within the click's activation).
+  useEffect(() => {
+    if (params.get('lights') !== 'off') return;
+    if (getRoom().timer.status === 'running') void enterLightsOff(getSettings().lightsOffFullscreen);
+    setParams({}, { replace: true });
+  }, [params, setParams]);
   useEffect(() => {
     const onFs = () => {
       if (!document.fullscreenElement && lightsOffStore.get() && settings.lightsOffFullscreen) lightsOffStore.set(false);
@@ -270,16 +262,25 @@ export function Room() {
 
         {!lightsOff &&
           (timer.status === 'idle' ? (
-            <div className="room__context">
-              <SubjectPicker value={timer.subjectId} onChange={(id) => room.setContext({ subjectId: id })} />
-              <input className="input" placeholder="What are you locking in on?" value={timer.task} maxLength={120} onChange={(e) => room.setContext({ task: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && room.start()} />
+            <div className="room__context-wrap">
+              <div className="room__context">
+                <SubjectPicker value={timer.subjectId} onChange={(id) => room.setContext({ subjectId: id })} />
+                <div className="room__taskfield">
+                  <input className="input" placeholder="What are you locking in on?" value={timer.task} maxLength={120} onChange={(e) => room.setContext({ task: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && room.start()} />
+                  <TaskPickerButton taskId={timer.taskId} />
+                </div>
+              </div>
+              <LinkedTask taskId={timer.taskId} editable />
             </div>
           ) : (
-            <p className="room__task">
-              {subject && <span className="chip"><span className="dot" style={{ background: subject.color }} />{subject.name}</span>}
-              {timer.task && <span>{timer.task}</span>}
-              {!subject && !timer.task && <span className="faint">{isBreak ? 'Rest your eyes. Stretch. Breathe.' : 'Deep work in progress'}</span>}
-            </p>
+            <>
+              <p className="room__task">
+                {subject && <span className="chip"><span className="dot" style={{ background: subject.color }} />{subject.name}</span>}
+                {timer.task && <span>{timer.task}</span>}
+                {!subject && !timer.task && <span className="faint">{isBreak ? 'Rest your eyes. Stretch. Breathe.' : 'Deep work in progress'}</span>}
+              </p>
+              {!isBreak && <LinkedTask taskId={timer.taskId} editable={false} />}
+            </>
           ))}
 
         {controls}

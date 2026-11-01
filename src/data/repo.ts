@@ -1,5 +1,5 @@
 import type { Table } from 'dexie';
-import type { AchievementUnlock, BaseRecord, Note, Preset, Session, Subject } from '../domain/types';
+import type { AchievementUnlock, BaseRecord, Note, Preset, Session, Subject, Task } from '../domain/types';
 import { uid } from '../domain/time';
 import { db } from './db';
 
@@ -53,6 +53,7 @@ export const subjectsRepo = dexieRepo<Subject>(db.subjects);
 export const presetsRepo = dexieRepo<Preset>(db.presets);
 export const notesRepo = dexieRepo<Note>(db.notes);
 export const unlocksRepo = dexieRepo<AchievementUnlock>(db.achievements);
+export const tasksRepo = dexieRepo<Task>(db.tasks);
 
 export function newRecord<T extends object>(fields: T): T & BaseRecord {
   const now = Date.now();

@@ -35,6 +35,7 @@ export function NoteEditor({ note, session, defaultSubjectId, onClose }: { note:
       ...initial,
       lastStudied: suggestion.lastStudied > initial.lastStudied ? suggestion.lastStudied : initial.lastStudied,
       whereStopped: initial.whereStopped || suggestion.whereStopped,
+      learnt: initial.learnt || suggestion.learnt,
       nextSteps: initial.nextSteps || suggestion.nextSteps,
     };
   });
@@ -43,7 +44,9 @@ export function NoteEditor({ note, session, defaultSubjectId, onClose }: { note:
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
   const pendingSuggestion =
     suggestion &&
-    ((suggestion.whereStopped && draft.whereStopped !== suggestion.whereStopped) || (suggestion.nextSteps && draft.nextSteps !== suggestion.nextSteps));
+    ((suggestion.whereStopped && draft.whereStopped !== suggestion.whereStopped) ||
+      (suggestion.learnt && !draft.learnt.includes(suggestion.learnt)) ||
+      (suggestion.nextSteps && draft.nextSteps !== suggestion.nextSteps));
 
   const close = async () => {
     if (dirty && !(await confirmDialog({ title: 'Discard your changes?', confirmLabel: 'Discard', cancelLabel: 'Keep editing', danger: true }))) return;
@@ -101,6 +104,7 @@ export function NoteEditor({ note, session, defaultSubjectId, onClose }: { note:
             <div>
               <strong>From your session {relativeDay(session.startedAt).toLowerCase()} ({formatDuration(session.focusMs)})</strong>
               {suggestion!.whereStopped && <p className="small muted">Where you stopped: “{suggestion!.whereStopped}”</p>}
+              {suggestion!.learnt && <p className="small muted">You learnt: “{suggestion!.learnt}”</p>}
               {suggestion!.nextSteps && <p className="small muted">Next time: “{suggestion!.nextSteps}”</p>}
             </div>
             <button
@@ -109,6 +113,8 @@ export function NoteEditor({ note, session, defaultSubjectId, onClose }: { note:
                 setDraft((d) => ({
                   ...d,
                   whereStopped: suggestion!.whereStopped || d.whereStopped,
+                  // What you learnt accumulates; the other fields describe where you are now.
+                  learnt: !suggestion!.learnt || d.learnt.includes(suggestion!.learnt) ? d.learnt : [d.learnt.trim(), suggestion!.learnt].filter(Boolean).join('\n'),
                   nextSteps: suggestion!.nextSteps || d.nextSteps,
                   lastStudied: suggestion!.lastStudied,
                 }))
