@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PulledRow, RemoteStore } from './engine';
 
-const url = import.meta.env.VITE_SUPABASE_URL;
+// Accept the API address too ("…supabase.co/rest/v1/"); the client wants the project root.
+const url = import.meta.env.VITE_SUPABASE_URL?.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 /** Sync exists only in builds given a Supabase project; otherwise the app is local-only. */
