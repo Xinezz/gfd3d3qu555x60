@@ -1,0 +1,70 @@
+.chart { position: relative; }
+
+/* Column chart */
+.col-chart { position: relative; margin-left: 34px; }
+.col-chart__grid { position: absolute; inset: 0; pointer-events: none; }
+.col-chart__tick { position: absolute; left: 0; right: 0; border-top: 1px solid rgb(239 230 216 / 0.06); }
+.col-chart__tick span { position: absolute; right: calc(100% + 8px); top: -8px; font-size: 0.7rem; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.col-chart__goal { position: absolute; left: 0; right: 0; border-top: 1px dashed rgb(159 176 138 / 0.55); }
+.col-chart__plot { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 2px; }
+.col { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; cursor: default; outline: none; border-radius: 6px; }
+.col:hover, .col:focus-visible { background: rgb(239 230 216 / 0.04); }
+.col:focus-visible { box-shadow: inset 0 0 0 1px var(--accent); }
+.col__bar {
+  position: relative;
+  width: min(24px, 70%);
+  min-height: 0;
+  border-radius: 4px 4px 0 0;
+  background: rgb(217 168 108 / 0.62);
+  transition: height 0.6s var(--ease), background 0.2s;
+}
+.col.is-current .col__bar, .col:hover .col__bar, .col:focus-visible .col__bar { background: var(--accent); }
+.col__value { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); font-size: 0.7rem; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.col-chart__axis { display: flex; gap: 2px; margin: 8px 0 0 34px; }
+.col-chart__axis span { flex: 1; text-align: center; font-size: 0.68rem; color: var(--text-3); white-space: nowrap; overflow: visible; }
+.col-chart__axis span.is-current { color: var(--accent-2); font-weight: 600; }
+
+/* Tooltip: value leads, label follows */
+.chart-tip {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, calc(-100% - 10px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: var(--surface-3);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-lift);
+  pointer-events: none;
+  white-space: nowrap;
+  animation: fade-in 0.12s;
+}
+.chart-tip strong { font-size: 0.92rem; font-weight: 600; color: var(--text); }
+.chart-tip span { font-size: 0.72rem; color: var(--text-3); }
+
+/* Subject bars */
+.hbars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.hbar__label { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.9rem; }
+.hbar__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar__value { color: var(--text-2); white-space: nowrap; }
+.hbar__track { height: 8px; border-radius: 0 4px 4px 0; background: rgb(239 230 216 / 0.05); }
+.hbar__track i { display: block; height: 100%; border-radius: 0 4px 4px 0; transition: width 0.8s var(--ease); }
+
+/* Heatmap (sequential amber ramp, validated against the card surface) */
+.heat { --cell: var(--heat-cell, 13px); }
+.heat__scroll { overflow-x: auto; padding-bottom: 4px; }
+.heat__grid { display: grid; grid-auto-rows: var(--cell); gap: 3px; width: max-content; }
+.heat__month { font-size: 0.68rem; color: var(--text-3); white-space: nowrap; overflow: visible; line-height: var(--cell); }
+.heat__dow { font-size: 0.66rem; color: var(--text-3); line-height: var(--cell); }
+.heat__cell { display: block; width: var(--cell); height: var(--cell); border-radius: 3px; background: rgb(239 230 216 / 0.06); }
+.heat__cell.lvl-1 { background: #74512a; }
+.heat__cell.lvl-2 { background: #9a6c35; }
+.heat__cell.lvl-3 { background: #c08a45; }
+.heat__cell.lvl-4 { background: #e3ad62; }
+.heat__cell.lvl-5 { background: #f7d6a0; }
+.heat__grid .heat__cell:hover { outline: 1px solid var(--text-2); outline-offset: 1px; }
+.heat__legend { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+.heat__legend .heat__cell { width: 12px; height: 12px; }
+.heat__key { margin-left: 12px; }

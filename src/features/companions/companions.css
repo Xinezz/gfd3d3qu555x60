@@ -1,0 +1,62 @@
+.companion {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  --size: clamp(230px, 34vh, 320px);
+}
+.companion.is-large { --size: clamp(260px, 46vh, 440px); }
+
+.companion__clock { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.companion__time {
+  font-family: var(--font-body);
+  font-weight: 200;
+  font-size: calc(var(--size) * 0.2);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 30px rgb(0 0 0 / 0.5);
+}
+.companion__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+/* Ring: clock sits inside */
+.companion--ring svg { width: var(--size); height: var(--size); filter: drop-shadow(0 10px 40px rgb(0 0 0 / 0.4)); }
+.companion--ring .companion__clock { position: absolute; inset: 0; justify-content: center; }
+.ring__halo { fill: rgb(20 16 13 / 0.35); stroke: rgb(239 230 216 / 0.04); stroke-width: 1; }
+.ring__track { fill: none; stroke: rgb(239 230 216 / 0.09); stroke-width: 6; }
+.ring__progress { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.3s linear; }
+.ring__tip { fill: var(--accent-2); filter: drop-shadow(0 0 6px var(--accent)); transition: cx 0.3s linear, cy 0.3s linear; }
+.companion--ring.is-running .ring__halo { animation: ring-breathe 6s ease-in-out infinite; }
+@keyframes ring-breathe { 50% { stroke: rgb(217 168 108 / 0.14); } }
+
+/* Candle */
+.companion--candle svg { width: calc(var(--size) * 0.6); height: calc(var(--size) * 1.02); overflow: visible; }
+.companion--candle .companion__time { font-size: calc(var(--size) * 0.17); }
+.candle__flame { animation: candle-flicker 2.8s ease-in-out infinite; }
+.candle__glow { animation: candle-glow 3.4s ease-in-out infinite; }
+@keyframes candle-flicker {
+  0%, 100% { transform: scale(1, 1) skewX(0); }
+  25% { transform: scale(0.97, 1.04) skewX(1.5deg); }
+  50% { transform: scale(1.02, 0.97) skewX(-1deg); }
+  75% { transform: scale(0.98, 1.02) skewX(0.8deg); }
+}
+@keyframes candle-glow { 50% { opacity: 0.82; } }
+
+/* Plant */
+.companion--plant svg { width: calc(var(--size) * 0.72); height: calc(var(--size) * 1.02); }
+.companion--plant .companion__time { font-size: calc(var(--size) * 0.17); }
+.plant__sway { transform-origin: 120px 262px; animation: sway 8s ease-in-out infinite; }
+@keyframes sway { 0%, 100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } }
+.plant__new-leaf { transition: transform 1s ease; }
+.plant__caption { margin: 6px 0 0; font-size: 0.78rem; color: var(--text-3); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .companion * { animation: none !important; }
+}
