@@ -56,13 +56,13 @@ src/
 - **Backups**: Settings → Your data offers JSON backup, CSV export of sessions, and import (merge).
 
 ## Design system
-Cozy dark academia with premium minimalism. Everything comes from tokens in . Pages never hard-code their own colours, sizes or timings.
+Cozy dark academia with premium minimalism. Everything comes from tokens in `src/styles/global.css`. Pages never hard-code their own colours, sizes or timings.
 - **Colour:** walnut surfaces, warm charcoal, beige and cream text, amber/gold accents, lavender as the secondary accent (links, reference lines, "next time" bookmarks). Tier metals: bronze, silver, gold, platinum (lavender-tinted) and legendary gold.
 - **Type:** DM Serif Display for headings, Inter for interface text, JetBrains Mono for timers and statistics. Labels are small caps with wide tracking.
 - **Shape and depth:** a 4px spacing grid, restrained radii (3–14px), three shadow levels, hairline rules instead of boxes where possible, and a faint paper grain.
-- **Motion:** 120/200/360/700ms on one easing curve. Page fade-ins, bar and progress growth, modal and toast entrances. Everything respects .
-- **Room theming:** each environment defines an accent , a glass  and  colours (). The room derives every surface from them with .
-- **Pixel art:** small hand-drawn sprites () for the brand mark, the streak flame and the achievement emblems.
+- **Motion:** 120/200/360/700ms on one easing curve. Page fade-ins, bar and progress growth, modal and toast entrances. Everything respects `prefers-reduced-motion`.
+- **Room theming:** each environment defines an accent `glow`, a glass `ink` and `sky` colours (`src/features/scenes/catalog.ts`). The room derives every surface from them with `color-mix`.
+- **Pixel art:** small hand-drawn sprites (`src/ui/Pixel.tsx`) for the brand mark, the streak flame and the achievement emblems.
 
 ## Achievements
 - **Derived, then kept.** `unlockTimeline()` replays your sessions in order and finds the exact session where each threshold was crossed. That moment is the unlock date, so achievements earned before Phase 3, or restored from a backup, get honest dates.
