@@ -172,13 +172,13 @@ export class YouTubeChannel {
     this.player?.loadVideoById(this.videos[this.index]);
   }
 
-  /** If playback hasn't started shortly after asking, the browser likely blocked autoplay. */
+  /** If playback still hasn't started well after asking, the browser likely blocked autoplay. Live streams can take several seconds to start, so wait long enough to avoid false alarms; the message clears itself if playback begins. */
   private watchForBlock() {
     this.clearBlock();
     this.blockTimer = setTimeout(() => {
       if (this.wantPlaying && this.player?.getPlayerState() !== 1 && this.player?.getPlayerState() !== 3)
         this.onChange('blocked', this.title());
-    }, 4000);
+    }, 9000);
   }
 
   private clearBlock() {
