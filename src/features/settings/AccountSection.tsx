@@ -88,7 +88,7 @@ export function AccountSection() {
     <section className="card">
       <h2>Account &amp; sync</h2>
       <p className="muted small">
-        Sign in with your email to sync your study data across devices. No password: we email you a 6-digit code (or a sign-in link). Signing in uploads what's on this device to
+        Sign in with your email to sync your study data across devices. No password: you'll get an email with a sign-in link. Signing in uploads what's on this device to
         your account.
       </p>
       {s.codeSentTo ? (
@@ -99,9 +99,12 @@ export function AccountSection() {
             void run(() => verifyCode(s.codeSentTo!, code));
           }}
         >
+          <p className="small">
+            Check <strong>{s.codeSentTo}</strong> and open the <strong>Sign in</strong> link on this device. LOCK IN will open signed in.
+          </p>
           <label className="field">
-            <span>Enter the code sent to {s.codeSentTo}</span>
-            <input className="input sync-code" inputMode="numeric" autoComplete="one-time-code" maxLength={10} value={code} onChange={(e) => setCode(e.target.value)} autoFocus />
+            <span>Email shows a 6-digit code instead? Enter it here.</span>
+            <input className="input sync-code" inputMode="numeric" autoComplete="one-time-code" maxLength={10} value={code} onChange={(e) => setCode(e.target.value)} />
           </label>
           <div className="settings__actions">
             <button className="btn btn--primary" disabled={busy || code.trim().length < 6}>
@@ -122,7 +125,7 @@ export function AccountSection() {
         >
           <input className="input" type="email" required placeholder="you@example.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <button className="btn btn--primary" disabled={busy || !email.includes('@')}>
-            Email me a code
+            Email me a sign-in link
           </button>
         </form>
       )}

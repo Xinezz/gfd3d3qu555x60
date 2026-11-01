@@ -73,7 +73,7 @@ Sign in with an emailed code in Settings → Account & sync, and sessions, refle
 1. Create a free project at supabase.com.
 2. SQL Editor → paste `supabase/schema.sql` → Run.
 3. Authentication → URL Configuration: set **Site URL** to the hosted app (e.g. `https://xinezz.github.io/gfd3d3qu555x60/`) and add `http://localhost:5173/` under Redirect URLs.
-4. Authentication → Email Templates → **Magic Link**: add `Your code: {{ .Token }}` to the message so the email carries a 6-digit code as well as the link.
+4. (Optional, needs custom SMTP) Authentication → Email Templates → **Magic Link**: add `Your code: {{ .Token }}` so the email also carries a 6-digit code. On the free built-in sender templates are locked; the default email's **Sign in** link works on its own (open it on the device you're signing in on). The built-in sender only emails your Supabase account's own address and allows a few emails per hour.
 5. Project Settings → API (or "Data API"): copy the **Project URL** and the **anon / publishable** key. Both are designed to be public; row-level security keeps each account's rows private.
 6. Hosted site: GitHub repo → Settings → Secrets and variables → Actions → **Variables**: add `SUPABASE_URL` and `SUPABASE_ANON_KEY`, then re-run the deploy (or push). Local dev: copy `.env.example` to `.env.local` and fill in the same two values.
 
