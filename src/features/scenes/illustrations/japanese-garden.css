@@ -1,0 +1,12 @@
+/* Japanese Garden */
+.scene__pond {
+  position: absolute;
+  inset: 70% 0 0;
+  background:
+    repeating-linear-gradient(rgb(255 200 190 / 0.06) 0 1px, transparent 1px 7px),
+    linear-gradient(#3a2a44, #171225);
+  animation: scene-shimmer-pond 6s ease-in-out infinite alternate;
+}
+.scene__stone-lantern { position: absolute; left: 9%; bottom: 16%; width: clamp(40px, 5cqw, 64px); overflow: visible; }
+.scene__lantern-light { filter: drop-shadow(0 0 10px rgb(255 190 110 / 0.9)); animation: scene-firelight 3s ease-in-out infinite alternate; }
+.scene__branch { position: absolute; top: 0; right: 0; width: min(46cqw, 520px); }

@@ -151,5 +151,22 @@ export interface Settings {
   lightsOffFullscreen: boolean;
   /** Unlocked decorations you have switched off (everything earned shows by default). */
   decorOff: string[];
+  /** Ambience layers you've changed, keyed `${environmentId}:${layerId}`. Anything missing uses the layer's defaults. */
+  ambienceMix: Record<string, { on: boolean; volume: number }>;
+  /** The study rooms' time of day: follow the local clock, or a fixed atmosphere. */
+  timeOfDay: TimeOfDayPref;
+  /* Scene effects (Settings → Environment). Each switches off cleanly on its own. */
+  sceneAnimations: boolean;
+  sceneParticles: boolean;
+  sceneLighting: boolean;
+  /** 0–1: how strongly lamps, fire and windows light the room. */
+  lightingIntensity: number;
+  /** Half the particles and gentler movement. */
+  calmMotion: boolean;
+  /** Turns motion off, on top of the operating system's reduced-motion setting. */
+  reduceMotion: boolean;
   updatedAt: number;
 }
+
+export type TimeOfDay = 'morning' | 'afternoon' | 'night';
+export type TimeOfDayPref = 'auto' | TimeOfDay;

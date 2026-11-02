@@ -2,25 +2,28 @@ import { useState } from 'react';
 import { Cat as CatIcon, Flame, Hourglass, Lock, Moon as MoonIcon, Pause, Play, Sprout, Timer as TimerIcon, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { BUILT_IN_PRESETS, BREAK_LIMITS, FOCUS_LIMITS } from '../../domain/presets';
 import { achievementById } from '../../domain/achievements';
-import { requirementName, rewardById, REWARDS } from '../../domain/rewards';
+import { REWARDS, unlockName } from '../../domain/rewards';
 import { useRewards } from '../rewards/useRewards';
 import type { CompanionId, Preset } from '../../domain/types';
 import { useCustomPresets } from '../../data/hooks';
 import { newRecord, presetsRepo } from '../../data/repo';
 import { getSettings, updateSettings, useSettings } from '../../data/settings';
-import { confirmDialog, Slider, Stepper, toast, Toggle } from '../../ui';
+import { confirmDialog, Segmented, Slider, Stepper, toast, Toggle } from '../../ui';
 import { audio, useAudio } from '../audio/audioStore';
 import { CUSTOM_MUSIC_ID, MUSIC } from '../audio/catalog';
 import { COMPANIONS } from '../companions/Companions';
-import { ENVIRONMENTS } from '../scenes/catalog';
+import { ambienceLayers } from '../scenes/catalog';
+import { EnvironmentPicker } from '../scenes/EnvironmentPicker';
+import { useActiveEnvironment } from '../scenes/sceneManager';
+import { TIMES_OF_DAY, useTimeOfDay } from '../scenes/timeOfDay';
 import { room, useRoom } from '../session/sessionStore';
 import { applyTemplate, currentSetup, describe, isTemplate, startTemplate } from './templates';
 
 export type PanelId = 'timer' | 'music' | 'scene' | 'companion' | 'decor' | 'thoughts';
 
-export function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+export function Panel({ title, closing, onClose, children }: { title: string; closing?: boolean; onClose: () => void; children: React.ReactNode }) {
   return (
-    <aside className="room-panel" aria-label={title}>
+    <aside className={`room-panel ${closing ? 'is-closing' : ''}`} aria-label={title} inert={closing || undefined}>
       <header className="room-panel__head">
         <h2>{title}</h2>
         <button className="icon-btn icon-btn--ghost" onClick={onClose} aria-label="Close panel">
@@ -245,6 +248,7 @@ export function MusicPanel() {
           </button>
         </div>
       </section>
+      <AmbienceControls />
       <section>
         <Toggle label="Play with the timer" hint="Starts music and room sound when a focus session starts" checked={s.autoPlayAudio} onChange={(v) => updateSettings({ autoPlayAudio: v })} />
         <Toggle label="Pause when a session ends" checked={s.pauseAudioOnEnd} onChange={(v) => updateSettings({ pauseAudioOnEnd: v })} />
@@ -258,48 +262,57 @@ export function MusicPanel() {
 
 export function ScenePanel() {
   const s = useSettings();
-  const a = useAudio();
-  const { isUnlocked } = useRewards();
+  const tod = useTimeOfDay();
   return (
     <div className="stack">
+      <EnvironmentPicker />
+      <section className="stack-s">
+        <h3 className="eyebrow">Time of day</h3>
+        <Segmented label="Time of day" value={s.timeOfDay} options={TIMES_OF_DAY} onChange={(v) => updateSettings({ timeOfDay: v })} />
+        <p className="faint small">
+          {s.timeOfDay === 'auto' ? `Following your clock: ${tod} now. It waits for your break rather than changing mid-session.` : 'Lights, windows and sky in the study rooms.'}
+        </p>
+      </section>
+      <AmbienceControls />
+    </div>
+  );
+}
+
+/**
+ * The room sound: play/pause and overall volume, then each layer of this environment's ambience
+ * with its own switch and volume. In both the Scene and Music panels.
+ */
+function AmbienceControls() {
+  const s = useSettings();
+  const a = useAudio();
+  const env = useActiveEnvironment();
+  const layers = ambienceLayers(env, s.ambienceMix);
+  const playing = layers.filter((l) => l.on).map((l) => l.layer.name);
+  return (
+    <section className="stack-s">
       <div className="player-card">
         <button className="btn btn--primary player-card__play" onClick={audio.toggleAmbience} aria-label={a.ambienceOn ? 'Pause room sound' : 'Play room sound'}>
           {a.ambienceOn ? <Pause size={20} /> : <Play size={20} />}
         </button>
         <div className="player-card__text">
-          <span className="eyebrow">Room sound</span>
-          <span className="small muted">{a.ambienceOn ? `Playing · ${ENVIRONMENTS.find((e) => e.id === s.environmentId)?.name}` : 'Paused · generated, works offline'}</span>
+          <span className="eyebrow">Room sound · {env.name}</span>
+          <span className="small muted">{a.ambienceOn ? (playing.length ? `Playing · ${playing.join(', ')}` : 'Every layer is off') : 'Paused · generated, works offline'}</span>
         </div>
       </div>
       <VolumeRow label="Room sound" value={s.ambienceVolume} muted={s.ambienceMuted} onVolume={audio.setAmbienceVolume} onMute={audio.toggleAmbienceMute} />
-      <div className="env-grid">
-        {ENVIRONMENTS.map((e) => {
-          const locked = !isUnlocked(e.reward);
-          return (
-            <button
-              key={e.id}
-              className={`env ${s.environmentId === e.id ? 'is-active' : ''} ${locked ? 'is-locked' : ''}`}
-              style={{ ['--tile-glow' as string]: e.glow, ['--s1' as string]: e.sky[0], ['--s2' as string]: e.sky[1], ['--s3' as string]: e.sky[2] }}
-              onClick={() => (locked ? toast(`Unlocks with “${unlockName(e.reward)}”`) : audio.selectEnvironment(e.id))}
-              aria-disabled={locked}
-            >
-              <span className="env__swatch" aria-hidden>
-                {locked && <Lock size={14} />}
-              </span>
-              <span className="option__name">{e.name}</span>
-              <span className="option__sub">{locked ? `Unlocks with ${unlockName(e.reward)}` : e.blurb}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+      {layers.length > 1 && (
+        <ul className="ambience-layers" aria-label={`${env.name} sound layers`}>
+          {layers.map(({ layer, on, volume }) => (
+            <li key={layer.id} className={on ? '' : 'is-off'}>
+              <Toggle label={layer.name} checked={on} onChange={(v) => audio.setAmbienceLayer(layer.id, { on: v })} />
+              <Slider label={`${layer.name} volume`} value={volume} onChange={(v) => audio.setAmbienceLayer(layer.id, { volume: v })} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
-
-const unlockName = (rewardId?: string) => {
-  const r = rewardId ? rewardById(rewardId) : undefined;
-  return r ? requirementName(r) : '';
-};
 
 const COMPANION_ICONS: Record<CompanionId, typeof TimerIcon> = { timer: TimerIcon, candle: Flame, plant: Sprout, hourglass: Hourglass, moon: MoonIcon, cat: CatIcon };
 

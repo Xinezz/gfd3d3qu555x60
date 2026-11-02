@@ -7,13 +7,16 @@ import { todayStats, totalFocusMs } from '../../domain/stats';
 import { useSessions, useSubjects } from '../../data/hooks';
 import { getSettings, useSettings } from '../../data/settings';
 import { confirmDialog, lightsOffStore, toast, useNow } from '../../ui';
+import { reducedMotion } from '../../ui/motion';
 import { audio, playerExpanded, useAudio } from '../audio/audioStore';
 import { Companion } from '../companions/Companions';
 import { Scene } from '../scenes/Scene';
 import { DecorLayer } from '../rewards/Decor';
 import { useRewards } from '../rewards/useRewards';
 import { COMPANIONS } from '../companions/Companions';
-import { environmentById } from '../scenes/catalog';
+import { SceneFxContext, useSceneFxSettings } from '../scenes/fx';
+import { useActiveEnvironment } from '../scenes/sceneManager';
+import { useTimeOfDay } from '../scenes/timeOfDay';
 import { getRoom, onSessionEvent, room, useRoom } from '../session/sessionStore';
 import { CompanionPanel, DecorPanel, MusicPanel, Panel, ScenePanel, ThoughtsPanel, TimerPanel, type PanelId } from './panels';
 import { SubjectPicker } from './SubjectPicker';
@@ -30,6 +33,9 @@ const PANELS: { id: PanelId; label: string; icon: typeof Clock }[] = [
   { id: 'thoughts', label: 'Thoughts', icon: NotebookPen },
 ];
 
+/** Matches the panel-out animation in room.css. */
+const PANEL_CLOSE_MS = 200;
+
 const isTyping = (e: KeyboardEvent) => {
   const el = e.target as HTMLElement;
   return el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
@@ -42,6 +48,9 @@ export function Room() {
   const { sessions } = useSessions();
   const lightsOff = lightsOffStore.use();
   const rewards = useRewards();
+  const env = useActiveEnvironment();
+  const tod = useTimeOfDay();
+  const fx = useSceneFxSettings(tod);
   const sound = useAudio();
   const [params, setParams] = useSearchParams();
   const [panel, setPanelState] = useState<PanelId | null>((params.get('panel') as PanelId) || null);
@@ -59,6 +68,16 @@ export function Room() {
     setPanelState(p);
     if (params.has('panel')) setParams({}, { replace: true });
   };
+  // The panel on screen. A closed panel stays a moment longer so it can slide away.
+  const [shownPanel, setShownPanel] = useState(panel);
+  useEffect(() => {
+    if (panel) {
+      setShownPanel(panel);
+      return;
+    }
+    const t = setTimeout(() => setShownPanel(null), reducedMotion() ? 0 : PANEL_CLOSE_MS);
+    return () => clearTimeout(t);
+  }, [panel]);
 
   // Idle timer follows the configured length (e.g. after changing it elsewhere).
   useEffect(() => {
@@ -174,8 +193,6 @@ export function Room() {
 
   const label = timer.status === 'paused' ? 'Paused' : isBreak ? 'Break' : timer.status === 'running' ? 'Focus' : 'Ready';
   // A locked pick (e.g. restored from another device's backup) falls back to the defaults.
-  const envUnlocked = !rewards.ready || rewards.isUnlocked(environmentById(settings.environmentId).reward);
-  const env = environmentById(envUnlocked ? settings.environmentId : 'rainy-window');
   const companionReward = COMPANIONS.find((c) => c.id === settings.companionId)?.reward;
   const companionId = !rewards.ready || rewards.isUnlocked(companionReward) ? settings.companionId : 'timer';
 
@@ -214,11 +231,19 @@ export function Room() {
 
   return (
     <div
-      className={`room ${lightsOff ? 'is-dark' : ''} ${lightsOff && !awake ? 'is-asleep' : ''} ${panel ? 'has-panel' : ''} ${timer.status !== 'idle' ? 'is-active' : ''}`}
-      style={{ ['--env-glow' as string]: env.glow, ['--env-ink' as string]: env.ink }}
+      className={`room ${lightsOff ? 'is-dark' : ''} ${lightsOff && !awake ? 'is-asleep' : ''} ${panel ? 'has-panel' : ''} ${timer.status !== 'idle' ? 'is-active' : ''} ${fx.animate ? '' : 'fx-static'}`}
+      style={{
+        ['--env-glow' as string]: env.glow,
+        ['--env-ink' as string]: env.ink,
+        ['--light-intensity' as string]: settings.lightingIntensity,
+        ['--fx-amp' as string]: fx.calm ? 0.5 : 1,
+      }}
     >
-      <Scene id={env.id} dim={lightsOff ? 0.12 : 0.36} />
-      <DecorLayer active={rewards.activeDecor} dark={lightsOff} makeRoomForPlayer={!lightsOff && playerExpanded(sound)} />
+      <SceneFxContext.Provider value={fx}>
+        {/* Daylight rooms are brighter, so they're dimmed a touch more to keep text readable. */}
+        <Scene env={env} dim={lightsOff ? 0.12 : tod === 'night' ? 0.36 : 0.46} />
+        <DecorLayer active={rewards.activeDecor} dark={lightsOff} makeRoomForPlayer={!lightsOff && playerExpanded(sound)} />
+      </SceneFxContext.Provider>
 
       <header className="room__top">
         <div className="room__where">
@@ -316,14 +341,14 @@ export function Room() {
         ))}
       </nav>
 
-      {panel && !lightsOff && (
-        <Panel title={PANELS.find((p) => p.id === panel)!.label} onClose={() => setPanel(null)}>
-          {panel === 'timer' && <TimerPanel />}
-          {panel === 'music' && <MusicPanel />}
-          {panel === 'scene' && <ScenePanel />}
-          {panel === 'companion' && <CompanionPanel />}
-          {panel === 'decor' && <DecorPanel />}
-          {panel === 'thoughts' && <ThoughtsPanel />}
+      {shownPanel && !lightsOff && (
+        <Panel title={PANELS.find((p) => p.id === shownPanel)!.label} closing={!panel} onClose={() => setPanel(null)}>
+          {shownPanel === 'timer' && <TimerPanel />}
+          {shownPanel === 'music' && <MusicPanel />}
+          {shownPanel === 'scene' && <ScenePanel />}
+          {shownPanel === 'companion' && <CompanionPanel />}
+          {shownPanel === 'decor' && <DecorPanel />}
+          {shownPanel === 'thoughts' && <ThoughtsPanel />}
         </Panel>
       )}
 

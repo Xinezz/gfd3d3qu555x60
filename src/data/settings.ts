@@ -16,7 +16,8 @@ export const DEFAULT_SETTINGS: Settings = {
   presetId: 'builtin-25',
   focusMin: 25,
   breakMin: 5,
-  environmentId: 'rainy-window',
+  // First visit opens in the Fireplace Study (DEFAULT_ENVIRONMENT_ID in scenes/catalog.ts).
+  environmentId: 'fireplace',
   companionId: 'timer',
   musicId: 'lofi-hiphop',
   customMusicUrl: '',
@@ -31,6 +32,14 @@ export const DEFAULT_SETTINGS: Settings = {
   notifications: false,
   lightsOffFullscreen: true,
   decorOff: [],
+  ambienceMix: {},
+  timeOfDay: 'auto',
+  sceneAnimations: true,
+  sceneParticles: true,
+  sceneLighting: true,
+  lightingIntensity: 0.7,
+  calmMotion: false,
+  reduceMotion: false,
   updatedAt: 0,
 };
 

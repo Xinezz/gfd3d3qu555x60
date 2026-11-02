@@ -13,7 +13,7 @@ import { updateSettings, useSettings } from '../../data/settings';
 import { useNow } from '../../ui';
 import { Pixel } from '../../ui/Pixel';
 import { Badge } from '../achievements/Badge';
-import { environmentById } from '../scenes/catalog';
+import { useActiveEnvironment } from '../scenes/sceneManager';
 import { room, useRoom } from '../session/sessionStore';
 import { ContinueStudying, UpNext } from './ContinueStudying';
 import { describe, isTemplate, startTemplate } from '../room/templates';
@@ -137,7 +137,7 @@ function StartArea() {
   const settings = useSettings();
   const templates = useCustomPresets().filter(isTemplate);
   useNow(timer.status === 'running', 1000);
-  const env = environmentById(settings.environmentId);
+  const env = useActiveEnvironment();
 
   if (timer.status !== 'idle')
     return (

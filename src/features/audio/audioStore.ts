@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import { getSettings, updateSettings } from '../../data/settings';
-import { environmentById } from '../scenes/catalog';
+import { ambienceLayers } from '../scenes/catalog';
+import { activeEnvironment, onEnvironmentChange } from '../scenes/sceneManager';
 import { onSessionEvent, registerMusicInfo } from '../session/sessionStore';
 import { CUSTOM_MUSIC_ID, musicOption, youTubeIdFrom } from './catalog';
-import { playChime, SynthChannel, unlockAudio } from './synth';
+import { playChime, SynthChannel, SynthMixer, unlockAudio } from './synth';
 import { YouTubeChannel, type YTStatus } from './youtube';
 
 /**
@@ -54,7 +55,7 @@ const youtube = new YouTubeChannel((status, text) => {
   else set({ musicStatus: status, musicTitle: text || state.musicTitle, musicMessage: '' });
 });
 const musicSynth = new SynthChannel();
-const ambienceSynth = new SynthChannel();
+const ambience = new SynthMixer();
 
 export const attachPlayerHost = (el: HTMLElement) => youtube.attach(el);
 
@@ -65,6 +66,14 @@ const musicLevel = () => {
 const ambienceLevel = () => {
   const s = getSettings();
   return s.ambienceMuted ? 0 : s.ambienceVolume;
+};
+/** The active environment's ambience layers that are switched on, each at its volume × the room sound volume. */
+const ambienceMix = () =>
+  ambienceLayers(activeEnvironment(), getSettings().ambienceMix)
+    .filter((l) => l.on)
+    .map((l) => ({ recipe: l.layer.recipe, volume: l.volume * ambienceLevel() }));
+const retuneAmbience = () => {
+  if (state.ambienceOn) ambience.play(ambienceMix());
 };
 
 export const audio = {
@@ -120,11 +129,11 @@ export const audio = {
   playAmbience() {
     unlockAudio();
     updateSettings({ ambienceOn: true });
-    ambienceSynth.play(environmentById(getSettings().environmentId).sound, ambienceLevel());
     set({ ambienceOn: true });
+    ambience.play(ambienceMix());
   },
   pauseAmbience() {
-    ambienceSynth.stop();
+    ambience.stop();
     set({ ambienceOn: false });
   },
   toggleAmbience() {
@@ -135,15 +144,22 @@ export const audio = {
   },
   setAmbienceVolume(v: number) {
     updateSettings({ ambienceVolume: v, ambienceMuted: false });
-    ambienceSynth.setVolume(ambienceLevel());
+    retuneAmbience();
   },
   toggleAmbienceMute() {
     updateSettings({ ambienceMuted: !getSettings().ambienceMuted });
-    ambienceSynth.setVolume(ambienceLevel());
+    retuneAmbience();
   },
-  selectEnvironment(id: string) {
-    updateSettings({ environmentId: id });
-    if (state.ambienceOn) ambienceSynth.play(environmentById(id).sound, ambienceLevel());
+  /** Switches one layer of the current environment's ambience, or sets its volume. Remembered per environment. */
+  setAmbienceLayer(layerId: string, patch: { on?: boolean; volume?: number }) {
+    const env = activeEnvironment();
+    const mix = getSettings().ambienceMix;
+    const current = ambienceLayers(env, mix).find((l) => l.layer.id === layerId);
+    if (!current) return;
+    updateSettings({ ambienceMix: { ...mix, [`${env.id}:${layerId}`]: { on: patch.on ?? current.on, volume: patch.volume ?? current.volume } } });
+    // Switching a layer on is a request to hear it.
+    if (patch.on && !state.ambienceOn) audio.playAmbience();
+    else retuneAmbience();
   },
   /** Switches the whole sound setup at once (session templates). Whatever is playing keeps playing, retuned. */
   applySetup(next: { environmentId: string; musicId: string; customMusicUrl: string; musicVolume: number; ambienceVolume: number; ambienceOn: boolean }) {
@@ -153,7 +169,7 @@ export const audio = {
     youtube.setVolume(next.musicVolume, false);
     if (state.musicOn && (prev.musicId !== next.musicId || prev.customMusicUrl !== next.customMusicUrl)) audio.playMusic();
     if (!next.ambienceOn) audio.pauseAmbience();
-    else if (state.ambienceOn) ambienceSynth.play(environmentById(next.environmentId).sound, ambienceLevel());
+    else retuneAmbience(); // the template's environment and volume
   },
 
   stopAll() {
@@ -163,6 +179,13 @@ export const audio = {
 };
 
 registerMusicInfo(() => (state.musicOn ? getSettings().musicId : null));
+
+/** Recipes the room sound is playing right now. */
+export const ambiencePlaying = () => ambience.playing;
+
+// The room sound follows the environment: its layers cross-fade in, the old ones out, and a layer
+// both share (e.g. wind) carries on. Only the ambience is touched: music plays on.
+onEnvironmentChange(retuneAmbience);
 
 function notify(title: string, body: string) {
   const s = getSettings();

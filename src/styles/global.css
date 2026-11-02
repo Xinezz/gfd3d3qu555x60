@@ -394,6 +394,8 @@ kbd { font-family: var(--font-mono); font-size: 0.7rem; padding: 1px 5px; border
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+/* The same when "Reduce motion" is switched on in Settings (the class is set by the app shell). */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 .nav-label--gap { margin-top: var(--s-6); }
 .brand { transition: opacity var(--dur-2); }
 .brand:hover { opacity: 0.85; }

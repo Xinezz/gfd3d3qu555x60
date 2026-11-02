@@ -1,0 +1,19 @@
+/* Aurora Night */
+.scene__aurora { position: absolute; inset: 0 0 40%; filter: blur(20px); mix-blend-mode: screen; }
+.scene__aurora i {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 10%;
+  height: 45%;
+  background: linear-gradient(180deg, transparent, var(--c) 45%, transparent);
+  opacity: 0.35;
+  border-radius: 50%;
+  transform-origin: 50% 100%;
+  animation: scene-aurora-wave 18s ease-in-out infinite alternate;
+}
+@keyframes scene-aurora-wave {
+  0% { transform: skewX(-18deg) scaleY(0.8) translateX(-6%); opacity: 0.45; }
+  50% { transform: skewX(10deg) scaleY(1.15) translateX(4%); opacity: 0.75; }
+  100% { transform: skewX(-6deg) scaleY(0.95) translateX(8%); opacity: 0.55; }
+}

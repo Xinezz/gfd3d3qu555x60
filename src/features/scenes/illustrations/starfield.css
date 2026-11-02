@@ -1,0 +1,32 @@
+/* Starfield */
+.scene__nebula {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 35% 25% at 35% 40%, rgb(140 90 220 / 0.32), transparent 70%),
+    radial-gradient(ellipse 30% 22% at 65% 58%, rgb(60 170 200 / 0.24), transparent 70%),
+    radial-gradient(ellipse 22% 18% at 52% 30%, rgb(230 120 150 / 0.18), transparent 70%);
+  filter: blur(30px);
+  animation: scene-spin 240s linear infinite;
+}
+@keyframes scene-spin { to { transform: rotate(360deg); } }
+.scene__drift { position: absolute; inset: 0; animation: scene-drift-stars 120s linear infinite; }
+@keyframes scene-drift-stars { from { transform: scale(1); } to { transform: scale(1.35); } }
+.scene__planet {
+  position: absolute;
+  right: 9%;
+  top: 16%;
+  width: min(18cqmin, 150px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #d9a8b8, #6a4a8a 55%, #1c1430 100%);
+  box-shadow: 0 0 60px rgb(160 120 220 / 0.25);
+}
+.scene__planet::after {
+  content: '';
+  position: absolute;
+  inset: 38% -38%;
+  border-radius: 50%;
+  border: 3px solid rgb(230 200 220 / 0.35);
+  transform: rotate(-16deg);
+}

@@ -42,3 +42,7 @@
   .settings .card { grid-template-columns: 1fr; padding: var(--s-6) 0; }
   .settings .card > h2, .settings .card > :not(h2) { grid-column: 1; grid-row: auto; }
 }
+
+/* Environment section */
+.settings__hint { margin: var(--s-1) 0 var(--s-2); }
+.settings__slider .slider { flex: 1; max-width: 280px; }

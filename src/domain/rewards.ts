@@ -56,3 +56,9 @@ export function isRewardUnlocked(rewardId: string | undefined, unlockedAchieveme
 }
 
 export const requirementName = (r: Reward) => achievementById(r.requires)?.name ?? r.requires;
+
+/** Name of the achievement that unlocks a reward, for "Unlocks with …" labels ('' when it's free). */
+export const unlockName = (rewardId?: string) => {
+  const r = rewardId ? rewardById(rewardId) : undefined;
+  return r ? requirementName(r) : '';
+};

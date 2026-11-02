@@ -22,6 +22,8 @@ The built site must be served over http(s). Opening `dist/index.html` directly f
 | 3 | Achievements: 24 across hours, long-term milestones, consistency, sessions and deep work; unlock celebrations (legendary for 1,000h); the road to 1,000 hours; unlock history | **Done** |
 | 4 | Rewards earned through achievements (no currency): 10 room decorations, 4 unlockable environments, 3 new companions (1 free); rewards gallery; optional Supabase account sync | **Done** (sync needs the one-time Supabase setup below) |
 | Smart study management | Planner (tasks with subject, deadline, estimate, priority; sessions count toward tasks), daily/weekly/monthly/long-term goals, Continue where you left off, study heatmap statistics, session templates, focus-quality ratings and trends | **Done** |
+| Environment system | Fireplace Study, Rainy Day Café, Midnight Library and Cosy Bedroom as the study rooms; Scene panel with thumbnails; switching cross-fades picture, colours and room sound without touching the timer or music; support for hand-painted artwork (`docs/environments.md`) | **Done**. No paintings yet: every environment uses its code-drawn illustration |
+| Living environments | The four study rooms redrawn with moving details (flames, sparks, rain on the café glass, steam, swaying plants, curtains, clouds, a sleeping cat); a lighting layer (fire, candles, lamps, windows, moonlight) with adjustable strength; morning, afternoon and night (auto or chosen); ambience layers per room with their own switches and volumes; things to click (the fire, a coffee cup, desk lamps); Settings → Environment for animations, particles, lighting, calmer motion and reduced motion | **Done**. Still code-drawn: the painted look needs artwork (`docs/environments.md` lists it) |
 
 ## Architecture
 
@@ -35,7 +37,9 @@ src/
   features/
     session/    Live session store: survives navigation, refresh and closed tabs
     audio/      YouTube music channel, Web Audio ambience synth, audio store
-    scenes/     10 animated environments (CSS/SVG/canvas, no image assets)
+    scenes/     14 environments (4 study rooms first): config (catalog.ts), scene manager,
+                cross-fading renderer, painted-art support, code-drawn illustrations/,
+                Scene panel picker. See docs/environments.md
     companions/ Timer ring, candle, plant
     room/       Lock-In Room page, side panels, completion/reflection, task picker, session templates
     planner/    Tasks + study goals

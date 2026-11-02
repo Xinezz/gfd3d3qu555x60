@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
+import { useReducedMotion } from '../../ui/motion';
+import { useSceneFx } from './fx';
 
-export type ParticleKind = 'rain' | 'glass' | 'snow' | 'embers' | 'fireflies' | 'dust' | 'petals';
+export type ParticleKind = 'rain' | 'glass' | 'snow' | 'embers' | 'sparks' | 'fireflies' | 'dust' | 'petals';
 
 interface P {
   x: number;
@@ -12,19 +14,26 @@ interface P {
   phase: number;
 }
 
-const COUNTS: Record<ParticleKind, number> = { rain: 220, glass: 70, snow: 160, embers: 40, fireflies: 28, dust: 45, petals: 18 };
+const COUNTS: Record<ParticleKind, number> = { rain: 220, glass: 70, snow: 160, embers: 40, sparks: 10, fireflies: 28, dust: 45, petals: 18 };
 
 /**
- * Lightweight canvas particle layer. Pauses while the tab is hidden, renders a single still frame
- * when the user prefers reduced motion, and scales particle count with screen area.
+ * Lightweight canvas particle layer. Pauses while the tab is hidden, scales particle count with
+ * its area, and follows the scene settings: none at all with particles off, one still frame in a
+ * thumbnail or with animation or motion off, half as many in calm mode.
  */
 export function Particles({ kind, density = 1, className, color }: { kind: ParticleKind; density?: number; className?: string; color?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const fx = useSceneFx();
+  const reducedMotion = useReducedMotion();
+  const still = fx.still || !fx.animate || reducedMotion;
+  const amount = density * (fx.calm ? 0.5 : 1);
 
   useEffect(() => {
+    if (!fx.particles) return;
     const canvas = ref.current!;
     const ctx = canvas.getContext('2d')!;
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced = still;
+    const density = amount;
     let w = 0, h = 0, raf = 0, last = performance.now();
     let ps: P[] = [];
 
@@ -39,6 +48,9 @@ export function Particles({ kind, density = 1, className, color }: { kind: Parti
           return { x: r() * w, y: initial ? r() * h : -10, vx: 0, vy: 25 + r() * 45, r: 0.8 + r() * 2.6, a: 0.4 + r() * 0.5, phase: r() * 10 };
         case 'embers':
           return { x: w * (0.35 + r() * 0.3), y: initial ? h * (0.4 + r() * 0.5) : h * 0.9, vx: (r() - 0.5) * 20, vy: -(30 + r() * 60), r: 0.8 + r() * 1.8, a: 1, phase: r() * 10 };
+        case 'sparks':
+          // `phase` is a wait before it flies, so sparks come now and then rather than as a stream.
+          return { x: w * (0.3 + r() * 0.4), y: h, vx: (r() - 0.5) * 40, vy: -(140 + r() * 160), r: 0.6 + r() * 0.9, a: 1, phase: initial ? r() * 6 : 1 + r() * 7 };
         case 'fireflies':
           return { x: r() * w, y: h * (0.4 + r() * 0.6), vx: 0, vy: 0, r: 1.2 + r() * 1.6, a: 0, phase: r() * 10 };
         case 'dust':
@@ -109,6 +121,22 @@ export function Particles({ kind, density = 1, className, color }: { kind: Parti
             p.y += p.vy * dt;
             p.a -= dt * 0.28;
             ctx.fillStyle = `rgba(255,${150 + Math.floor(p.a * 60)},70,${Math.max(0, p.a)})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+            if (p.a <= 0) ps[i] = spawn(false);
+            break;
+          }
+          case 'sparks': {
+            if (p.phase > 0) {
+              p.phase -= dt;
+              break;
+            }
+            p.x += (p.vx + Math.sin(t / 90 + p.r * 9) * 25) * dt;
+            p.y += p.vy * dt;
+            p.vy *= 1 - dt * 0.6;
+            p.a -= dt * 0.85;
+            ctx.fillStyle = `rgba(255,${190 + Math.floor(p.a * 50)},110,${Math.max(0, p.a)})`;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
             ctx.fill();
@@ -188,7 +216,7 @@ export function Particles({ kind, density = 1, className, color }: { kind: Parti
       ro.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [kind, density, color]);
+  }, [kind, amount, color, still, fx.particles]);
 
-  return <canvas ref={ref} className={`particles ${className ?? ''}`} aria-hidden />;
+  return fx.particles ? <canvas ref={ref} className={`particles ${className ?? ''}`} aria-hidden /> : null;
 }
