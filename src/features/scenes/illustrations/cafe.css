@@ -1,0 +1,49 @@
+/* Rainy Day Café. Night is the default; by day the street outside is grey and rainy. */
+.scene--cafe .board__art {
+  --wall: #2a1a12;
+  --wainscot: #22150e;
+  --sky-1: #141626;
+  --sky-2: #2a2433;
+  --city: #1c1b27;
+  --street: #14131b;
+  --lit-o: 1;
+  --lamp-o: 1;
+  --bokeh-o: 1;
+  --ambient: #000;
+  --ambient-o: 0;
+}
+.scene--cafe .tod-morning {
+  --wall: #48332a;
+  --wainscot: #38281e;
+  --sky-1: #9ba8b8;
+  --sky-2: #cbc4b8;
+  --city: #6e7380;
+  --street: #4a4c55;
+  --lit-o: 0.25;
+  --lamp-o: 0;
+  --bokeh-o: 0.35;
+  --ambient: #f0e2cc;
+  --ambient-o: 0.06;
+}
+.scene--cafe .tod-afternoon {
+  --wall: #443128;
+  --wainscot: #36271e;
+  --sky-1: #8794a5;
+  --sky-2: #b3bbc4;
+  --city: #616976;
+  --street: #434750;
+  --lit-o: 0.15;
+  --lamp-o: 0;
+  --bokeh-o: 0.25;
+  --ambient: #e6e6e2;
+  --ambient-o: 0.05;
+}
+
+/* Reflected light drifting across the glass. */
+.cafe-sheen {
+  position: absolute;
+  inset: 0 -40%;
+  background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.07) 42%, transparent 50%, transparent 62%, rgb(255 230 200 / 0.05) 70%, transparent 78%);
+  animation: cafe-sheen 26s ease-in-out infinite alternate;
+}
+@keyframes cafe-sheen { to { transform: translateX(calc(18% * var(--fx-amp, 1))); } }

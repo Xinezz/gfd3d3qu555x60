@@ -1,0 +1,20 @@
+/* Ocean */
+.scene__waves { position: absolute; left: 0; right: 0; height: 24%; overflow: hidden; }
+.scene__waves svg {
+  width: 200%;
+  height: 100%;
+  animation: scene-wave linear infinite;
+}
+@keyframes scene-wave { to { transform: translateX(-50%); } }
+.scene__reflection {
+  position: absolute;
+  left: calc(62% + 45px);
+  top: 58.2%;
+  bottom: 0;
+  width: 160px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(rgb(245 235 215 / 0.75) 0 3px, transparent 3px 11px);
+  mask: radial-gradient(ellipse 50% 100% at 50% 0, #000 10%, transparent 75%);
+  filter: blur(1px);
+  animation: scene-shimmer 4s ease-in-out infinite alternate;
+}

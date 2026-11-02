@@ -1,0 +1,63 @@
+/* Fireplace Study. Night is the default; morning and afternoon bring daylight to the window. */
+.scene--fireplace .board__art {
+  --wall: #24150d;
+  --wainscot: #1b0f09;
+  --sky-1: #0b1430;
+  --sky-2: #2a3a62;
+  --trees: #0a0f1c;
+  --stars-o: 1;
+  --moon-o: 1;
+  --sun-o: 0;
+  --ambient: #000;
+  --ambient-o: 0;
+}
+.scene--fireplace .tod-morning {
+  --wall: #3a2415;
+  --wainscot: #2b190e;
+  --sky-1: #f4bf90;
+  --sky-2: #f6e3c8;
+  --trees: #6f6655;
+  --stars-o: 0;
+  --moon-o: 0;
+  --sun-o: 1;
+  --ambient: #ffd9a6;
+  --ambient-o: 0.07;
+}
+.scene--fireplace .tod-afternoon {
+  --wall: #33221a;
+  --wainscot: #261810;
+  --sky-1: #8eaecd;
+  --sky-2: #d6dee5;
+  --trees: #4d5c4b;
+  --stars-o: 0;
+  --moon-o: 0;
+  --sun-o: 0.35;
+  --ambient: #ebe5d9;
+  --ambient-o: 0.05;
+}
+
+.scene__flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: scene-flame 1.6s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+  filter: blur(2.5px);
+  opacity: 0.9;
+}
+@keyframes scene-flame {
+  0% { transform: scale(1, 1) skewX(0deg); }
+  30% { transform: scale(0.94, 1.08) skewX(2deg); }
+  60% { transform: scale(1.04, 0.93) skewX(-2deg); }
+  100% { transform: scale(0.97, 1.05) skewX(1deg); }
+}
+/* Banked up (click the fire): taller flames. */
+.fp-flames { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 1.2s var(--ease-in-out); }
+.scene--fireplace [data-fire='1'] .fp-flames { transform: scale(1.2, 1.28); }
+
+/* Each candle flame is its own small layer, so its flicker moves the layer rather than repainting the room. */
+.fp-candle { animation: fp-candle 1.3s ease-in-out infinite alternate; }
+@keyframes fp-candle {
+  0% { transform: scale(1, 1); }
+  40% { transform: scale(calc(1 - 0.08 * var(--fx-amp, 1)), calc(1 + 0.1 * var(--fx-amp, 1))); }
+  100% { transform: scale(calc(1 + 0.04 * var(--fx-amp, 1)), calc(1 - 0.06 * var(--fx-amp, 1))); }
+}

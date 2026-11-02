@@ -6,8 +6,8 @@
  */
 
 export type RecipeId =
-  | 'rain' | 'rain-window' | 'brown' | 'fire' | 'bedroom' | 'city' | 'forest' | 'nature'
-  | 'ocean' | 'library' | 'cafe' | 'snow' | 'garden' | 'desert' | 'space';
+  | 'rain' | 'rain-window' | 'rain-soft' | 'brown' | 'fire' | 'wind' | 'city' | 'forest' | 'nature'
+  | 'ocean' | 'quiet-room' | 'pages' | 'cafe' | 'chatter' | 'night' | 'snow' | 'garden' | 'desert' | 'space';
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -30,36 +30,55 @@ export function unlockAudio() {
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
+/** Length of the looped noise beds: long enough that the repeat can't be picked out. */
+const LOOP_SECONDS = 12;
+/** How much past the loop is blended into its start to hide the join. */
+const SEAM_SECONDS = 0.25;
+
+export function noiseSamples(kind: 'white' | 'pink' | 'brown', n: number): Float32Array<ArrayBuffer> {
+  const d = new Float32Array(n);
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, last = 0;
+  for (let i = 0; i < n; i++) {
+    const w = Math.random() * 2 - 1;
+    if (kind === 'white') d[i] = w * 0.5;
+    else if (kind === 'pink') {
+      // Paul Kellet's refined pink noise filter
+      b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759;
+      b2 = 0.969 * b2 + w * 0.153852; b3 = 0.8665 * b3 + w * 0.3104856;
+      b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+      d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+      b6 = w * 0.115926;
+    } else {
+      last = (last + 0.02 * w) / 1.02;
+      d[i] = last * 3.5;
+    }
+  }
+  return d;
+}
+
+/**
+ * Cuts `len` samples out of a longer run so they loop without a click. Pink and brown noise are
+ * smooth, so jumping from the last sample back to an unrelated first one is an audible thump.
+ * Here the samples just past the end are faded into the start (equal power, so the level holds
+ * steady), which makes the last sample flow straight into the first.
+ */
+export function seamlessLoop(samples: Float32Array, len: number): Float32Array<ArrayBuffer> {
+  const fade = samples.length - len;
+  const out = samples.slice(0, len);
+  for (let i = 0; i < fade; i++) {
+    const k = ((i / fade) * Math.PI) / 2;
+    out[i] = samples[i] * Math.sin(k) + samples[len + i] * Math.cos(k);
+  }
+  return out;
+}
+
 function noiseBuffer(c: AudioContext, kind: 'white' | 'pink' | 'brown'): AudioBuffer {
   const cached = buffers[kind];
   if (cached) return cached;
-  const len = c.sampleRate * 6;
+  const len = Math.round(c.sampleRate * LOOP_SECONDS);
+  const fade = Math.round(c.sampleRate * SEAM_SECONDS);
   const buf = c.createBuffer(2, len, c.sampleRate);
-  for (let ch = 0; ch < 2; ch++) {
-    const d = buf.getChannelData(ch);
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, last = 0;
-    for (let i = 0; i < len; i++) {
-      const w = Math.random() * 2 - 1;
-      if (kind === 'white') d[i] = w * 0.5;
-      else if (kind === 'pink') {
-        // Paul Kellet's refined pink noise filter
-        b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759;
-        b2 = 0.969 * b2 + w * 0.153852; b3 = 0.8665 * b3 + w * 0.3104856;
-        b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
-        d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
-        b6 = w * 0.115926;
-      } else {
-        last = (last + 0.02 * w) / 1.02;
-        d[i] = last * 3.5;
-      }
-    }
-    // Crossfade the loop seam so there's no click every 6 seconds.
-    const fade = Math.floor(c.sampleRate * 0.05);
-    for (let i = 0; i < fade; i++) {
-      const k = i / fade;
-      d[len - fade + i] = d[len - fade + i] * (1 - k) + d[i] * k;
-    }
-  }
+  for (let ch = 0; ch < 2; ch++) buf.copyToChannel(seamlessLoop(noiseSamples(kind, len + fade), len), ch);
   buffers[kind] = buf;
   return buf;
 }
@@ -90,7 +109,7 @@ class Kit {
     src.buffer = noiseBuffer(this.c, kind);
     src.loop = true;
     src.connect(to);
-    src.start(0, rand(0, 5));
+    src.start(0, rand(0, LOOP_SECONDS));
     this.stops.push(() => src.stop());
     return src;
   }
@@ -193,11 +212,11 @@ class Kit {
   }
 }
 
-function rain(k: Kit, muffled = false) {
-  k.bed('pink', 'bandpass', muffled ? 1400 : 2600, 0.55, 0.35);
-  k.bed('brown', 'lowpass', 300, 0.22);
+function rain(k: Kit, muffled = false, level = 1) {
+  k.bed('pink', 'bandpass', muffled ? 1400 : 2600, 0.55 * level, 0.35);
+  k.bed('brown', 'lowpass', 300, 0.22 * level);
   k.every(0.03, 0.14, (t) =>
-    k.burst(t, { dur: rand(0.015, 0.05), type: 'bandpass', freq: rand(muffled ? 1200 : 2500, muffled ? 2500 : 6000), q: 2, level: rand(0.02, 0.07), pan: rand(-0.8, 0.8) }),
+    k.burst(t, { dur: rand(0.015, 0.05), type: 'bandpass', freq: rand(muffled ? 1200 : 2500, muffled ? 2500 : 6000), q: 2, level: rand(0.02, 0.07) * level, pan: rand(-0.8, 0.8) }),
   );
 }
 
@@ -240,10 +259,9 @@ const RECIPES: Record<RecipeId, (k: Kit) => void> = {
     // Distant thunder, rarely.
     k.every(30, 80, (t) => k.burst(t, { kind: 'brown', dur: rand(3, 5), attack: 0.8, type: 'lowpass', freq: 140, level: 0.6 }), 20);
   },
-  bedroom: (k) => {
-    rain(k, true);
-    tick(k, 0.025);
-  },
+  // Rain heard from indoors, through the window.
+  'rain-soft': (k) => rain(k, true, 0.7),
+  wind: (k) => wind(k, 0.24, 420, 1.1),
   fire: (k) => {
     const { gain } = k.bed('brown', 'lowpass', 500, 0.55);
     k.lfo(0.3, 0.12, gain.gain);
@@ -278,20 +296,37 @@ const RECIPES: Record<RecipeId, (k: Kit) => void> = {
     }
     k.bed('brown', 'lowpass', 180, 0.3);
   },
-  library: (k) => {
+  // A big quiet room: low air and a clock.
+  'quiet-room': (k) => {
     k.bed('brown', 'lowpass', 160, 0.16);
     tick(k, 0.028);
-    // A page turning nearby now and then.
-    k.every(14, 40, (t) => k.burst(t, { dur: rand(0.25, 0.4), attack: 0.06, type: 'bandpass', freq: rand(2200, 3500), q: 0.8, level: 0.05, pan: rand(-0.5, 0.5) }), 5);
   },
+  // A page turning nearby now and then, and old wood settling.
+  pages: (k) => {
+    k.every(10, 30, (t) => k.burst(t, { dur: rand(0.25, 0.4), attack: 0.06, type: 'bandpass', freq: rand(2200, 3500), q: 0.8, level: 0.05, pan: rand(-0.5, 0.5) }), 3);
+    k.every(25, 60, (t) => k.burst(t, { kind: 'brown', dur: rand(0.4, 0.8), attack: 0.15, type: 'bandpass', freq: rand(260, 420), q: 6, level: 0.08, pan: rand(-0.8, 0.8) }), 12);
+  },
+  // The room itself: cups set down, a spoon against china, low air.
   cafe: (k) => {
-    // Murmur: band-limited voices whose loudness wanders like conversation.
+    k.bed('brown', 'lowpass', 250, 0.2);
+    k.every(2.5, 8, (t) => k.bell(t, rand(2600, 4200), rand(0.012, 0.03), 0.35, k.pan(rand(-0.7, 0.7))));
+  },
+  // Murmur: band-limited voices whose loudness wanders like conversation.
+  chatter: (k) => {
     for (let i = 0; i < 4; i++) {
       const { gain } = k.bed('pink', 'bandpass', rand(320, 900), 0.08, 1.4);
       k.every(0.15, 0.45, (t) => gain.gain.setTargetAtTime(rand(0.02, 0.14), t, 0.08));
     }
-    k.bed('brown', 'lowpass', 250, 0.2);
-    k.every(2.5, 8, (t) => k.bell(t, rand(2600, 4200), rand(0.012, 0.03), 0.35, k.pan(rand(-0.7, 0.7))));
+  },
+  // Crickets far off in the dark, over a still room.
+  night: (k) => {
+    k.bed('brown', 'lowpass', 140, 0.1);
+    k.every(0.8, 2.6, (t) => {
+      const f = rand(4200, 4900);
+      const pan = rand(-0.9, 0.9);
+      const n = Math.floor(rand(3, 7));
+      for (let i = 0; i < n; i++) k.chirp(t + i * 0.055, f, f * 1.02, 0.03, 0.012, pan);
+    });
   },
   desert: (k) => {
     wind(k, 0.26, 300, 1.4);
@@ -320,10 +355,15 @@ const RECIPES: Record<RecipeId, (k: Kit) => void> = {
   },
 };
 
+/** How long one recipe takes to fade into the next, in from silence, or out. */
+const CROSSFADE_SECONDS = 1.5;
+
 /** One independently controlled output (music or ambience) with smooth volume changes. */
 export class SynthChannel {
   private out: GainNode | null = null;
   private kit: Kit | null = null;
+  /** Each recipe plays through its own gain, so the old one can fade out while the new one fades in. */
+  private kitGain: GainNode | null = null;
   private recipe: RecipeId | null = null;
 
   private ensureOut() {
@@ -344,13 +384,19 @@ export class SynthChannel {
     const c = audioContext();
     const out = this.ensureOut();
     if (this.kit && this.recipe === recipe) return this.setVolume(volume);
-    this.stopNow();
+    // Switching (e.g. to another environment's sound) cross-fades instead of cutting.
+    this.fadeOut();
+    const t = c.currentTime;
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(1, t + CROSSFADE_SECONDS);
+    gain.connect(out);
     this.recipe = recipe;
-    this.kit = new Kit(c, out);
+    this.kitGain = gain;
+    this.kit = new Kit(c, gain);
     RECIPES[recipe](this.kit);
-    out.gain.cancelScheduledValues(c.currentTime);
-    out.gain.setValueAtTime(0, c.currentTime);
-    out.gain.linearRampToValueAtTime(volume, c.currentTime + 1.2);
+    out.gain.cancelScheduledValues(t);
+    out.gain.setTargetAtTime(volume, t, 0.08);
   }
 
   setVolume(volume: number) {
@@ -360,18 +406,51 @@ export class SynthChannel {
 
   /** Fades out, then frees the graph. */
   stop() {
-    if (!this.kit || !this.out) return;
-    const c = audioContext();
-    const kit = this.kit;
-    this.kit = null;
-    this.out.gain.cancelScheduledValues(c.currentTime);
-    this.out.gain.setTargetAtTime(0, c.currentTime, 0.25);
-    setTimeout(() => kit.stop(), 1200);
+    this.fadeOut();
   }
 
-  private stopNow() {
-    this.kit?.stop();
+  private fadeOut() {
+    if (!this.kit || !this.kitGain) return;
+    const kit = this.kit;
+    const gain = this.kitGain;
     this.kit = null;
+    this.kitGain = null;
+    const t = audioContext().currentTime;
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(gain.gain.value, t);
+    gain.gain.linearRampToValueAtTime(0, t + CROSSFADE_SECONDS);
+    setTimeout(() => {
+      kit.stop();
+      gain.disconnect();
+    }, CROSSFADE_SECONDS * 1000 + 100);
+  }
+}
+
+/**
+ * Several recipes at once (an environment's ambience layers). Each fades in, out or to a new volume
+ * on its own; a recipe that's wanted again carries on rather than restarting.
+ */
+export class SynthMixer {
+  private channels = new Map<RecipeId, SynthChannel>();
+
+  /** Plays exactly these layers: anything else playing fades out. */
+  play(layers: { recipe: RecipeId; volume: number }[]) {
+    const wanted = new Map(layers.map((l) => [l.recipe, l.volume]));
+    for (const [recipe, channel] of this.channels) if (!wanted.has(recipe)) channel.stop();
+    for (const [recipe, volume] of wanted) {
+      let channel = this.channels.get(recipe);
+      if (!channel) this.channels.set(recipe, (channel = new SynthChannel()));
+      channel.play(recipe, volume);
+    }
+  }
+
+  stop() {
+    this.channels.forEach((c) => c.stop());
+  }
+
+  /** Recipes currently sounding. */
+  get playing(): RecipeId[] {
+    return [...this.channels.values()].map((c) => c.playingRecipe).filter((r): r is RecipeId => r !== null);
   }
 }
 

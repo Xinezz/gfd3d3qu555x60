@@ -10,6 +10,9 @@ import { Pixel } from '../ui/Pixel';
 import { NowPlaying } from '../features/audio/NowPlaying';
 import { Completion } from '../features/room/Completion';
 import { AchievementCenter } from '../features/achievements/Celebration';
+import { useUnlockedAchievements } from '../features/rewards/useRewards';
+import { setUnlockedAchievements } from '../features/scenes/sceneManager';
+import { useSettings } from '../data/settings';
 import { ConfirmHost, lightsOffStore, Toasts, useNow } from '../ui';
 
 const NAV = [
@@ -63,6 +66,18 @@ function TodayLine() {
   );
 }
 
+/** Settings → Reduce motion applies site-wide, like the operating system's setting (global.css). */
+function useReduceMotionClass() {
+  const { reduceMotion } = useSettings();
+  useEffect(() => void document.documentElement.classList.toggle('reduce-motion', reduceMotion), [reduceMotion]);
+}
+
+/** Tells the scene manager which rewards are earned, so a locked environment is never shown or heard. */
+function useEnvironmentUnlocks() {
+  const { unlocked, ready } = useUnlockedAchievements();
+  useEffect(() => setUnlockedAchievements(ready ? unlocked : null), [unlocked, ready]);
+}
+
 /** Each page opens at its top rather than inheriting the previous page's scroll. */
 function useScrollReset() {
   const { pathname } = useLocation();
@@ -74,6 +89,8 @@ function useScrollReset() {
 export function Shell() {
   useLiveTitle();
   useScrollReset();
+  useEnvironmentUnlocks();
+  useReduceMotionClass();
   // App-wide, so a session that ended while you were elsewhere (or away) still gets its reflection.
   const { reviewId } = useRoom();
   const lightsOff = lightsOffStore.use();

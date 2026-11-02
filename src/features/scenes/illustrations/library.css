@@ -1,0 +1,48 @@
+/* Midnight Library. Night is the default: moonlight and lamps. By day, sun through the arches. */
+.scene--library .board__art {
+  --wall: #160f0b;
+  --floor: #1a120c;
+  --sky-1: #0a1430;
+  --sky-2: #1e2c50;
+  --roofs: #0b1020;
+  --beam: #9fb5e6;
+  --beam-o: 0.6;
+  --moon-o: 1;
+  --stars-o: 1;
+  --ambient: #000;
+  --ambient-o: 0;
+}
+.scene--library .tod-morning {
+  --wall: #3a2a1d;
+  --floor: #3b2a1c;
+  --sky-1: #f2c089;
+  --sky-2: #f7e2c5;
+  --roofs: #7a6d5c;
+  --beam: #ffd59a;
+  --beam-o: 0.75;
+  --moon-o: 0;
+  --stars-o: 0;
+  --ambient: #ffe0b0;
+  --ambient-o: 0.07;
+}
+.scene--library .tod-afternoon {
+  --wall: #33261b;
+  --floor: #35271b;
+  --sky-1: #9fbcd8;
+  --sky-2: #dbe4ea;
+  --roofs: #5f6870;
+  --beam: #f1f4f7;
+  --beam-o: 0.5;
+  --moon-o: 0;
+  --stars-o: 0;
+  --ambient: #ece8e0;
+  --ambient-o: 0.05;
+}
+
+/* The light on the floor brightens and fades, very slowly, as if clouds pass the moon. */
+.lib-beam { animation: lib-beam 21s ease-in-out infinite alternate; }
+@keyframes lib-beam { to { opacity: calc(1 - 0.3 * var(--fx-amp, 1)); transform: translateX(calc(1.2% * var(--fx-amp, 1))); } }
+
+/* The left desk lamp switched off (click it). */
+.lib-lamp-glow { transition: opacity 0.6s ease; }
+.scene--library [data-lamp='1'] .lib-lamp-glow { opacity: 0.12; }

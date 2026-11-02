@@ -4,6 +4,7 @@ import type { Distraction, Reflection, Session } from '../../domain/types';
 import { dayKey, uid } from '../../domain/time';
 import { sessionsRepo } from '../../data/repo';
 import { getSettings } from '../../data/settings';
+import { activeEnvironment } from '../scenes/sceneManager';
 
 /**
  * The live session lives outside React so it survives page navigation, and it is mirrored to
@@ -103,7 +104,7 @@ function buildSession(t: T.LiveTimer, now: number, early: boolean): Session {
     taskId: t.taskId ?? null,
     reflection: null,
     distractions: t.distractions,
-    environmentId: s.environmentId,
+    environmentId: activeEnvironment().id,
     musicId: currentMusic(),
     companionId: s.companionId,
   };

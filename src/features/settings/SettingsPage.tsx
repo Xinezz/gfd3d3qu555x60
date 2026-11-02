@@ -8,7 +8,9 @@ import { presetsRepo, SUBJECT_COLORS, subjectsRepo } from '../../data/repo';
 import { updateSettings, useSettings } from '../../data/settings';
 import { db, isStoragePersistent, requestPersistentStorage } from '../../data/db';
 import { deleteAllData, downloadBackup, downloadSessionsCsv, importBackup } from '../../data/backup';
-import { confirmDialog, Stepper, toast, Toggle } from '../../ui';
+import { confirmDialog, Segmented, Slider, Stepper, toast, Toggle } from '../../ui';
+import { systemReducesMotion } from '../../ui/motion';
+import { TIMES_OF_DAY } from '../scenes/timeOfDay';
 import { deleteCloudData, getSyncState, uploadEverything } from '../../sync/syncStore';
 import { AccountSection } from './AccountSection';
 import { describe, isTemplate } from '../room/templates';
@@ -74,10 +76,45 @@ export function SettingsPage() {
         <Toggle label="Include room sound with the timer" hint="The environment's ambience (rain, fire, café…)" checked={s.ambienceOn} onChange={(v) => updateSettings({ ambienceOn: v })} />
       </section>
 
+      <EnvironmentSection />
+
       <SubjectsSection />
       <PresetsSection />
       <DataSection />
     </div>
+  );
+}
+
+/** How the Lock-In Room looks and moves. Each effect switches off on its own and the room still works. */
+function EnvironmentSection() {
+  const s = useSettings();
+  const systemReduces = systemReducesMotion();
+  return (
+    <section className="card">
+      <h2>Environment</h2>
+      <p className="muted small">How the Lock-In Room looks and moves. Everything here is optional: switch off whatever distracts you.</p>
+      <div className="settings__row">
+        <span>Time of day</span>
+        <Segmented label="Time of day" value={s.timeOfDay} options={TIMES_OF_DAY} onChange={(v) => updateSettings({ timeOfDay: v })} />
+      </div>
+      <p className="faint small settings__hint">Auto follows your clock (morning from 6:00, afternoon from 12:00, night from 18:00) and waits for your break rather than changing mid-session.</p>
+      <Toggle label="Scene animations" hint="Flames, rain, curtains, clouds and other movement" checked={s.sceneAnimations} onChange={(v) => updateSettings({ sceneAnimations: v })} />
+      <Toggle label="Floating particles" hint="Embers, sparks, dust, rain and snow" checked={s.sceneParticles} onChange={(v) => updateSettings({ sceneParticles: v })} />
+      <Toggle label="Lighting effects" hint="Firelight, lamps, candles and window light" checked={s.sceneLighting} onChange={(v) => updateSettings({ sceneLighting: v })} />
+      {s.sceneLighting && (
+        <div className="settings__row settings__slider">
+          <span>Lighting strength</span>
+          <Slider label="Lighting strength" value={s.lightingIntensity} onChange={(v) => updateSettings({ lightingIntensity: v })} />
+        </div>
+      )}
+      <Toggle label="Calmer motion" hint="Half the particles, and gentler flicker and sway" checked={s.calmMotion} onChange={(v) => updateSettings({ calmMotion: v })} />
+      <Toggle
+        label="Reduce motion"
+        hint={systemReduces ? 'Your device already asks for reduced motion, so the scenes stay still either way' : 'Stops movement across the site, like your device’s reduced-motion setting'}
+        checked={s.reduceMotion || systemReduces}
+        onChange={(v) => updateSettings({ reduceMotion: v })}
+      />
+    </section>
   );
 }
 

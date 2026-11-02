@@ -1,0 +1,55 @@
+/* Cosy Bedroom. Night is the default; morning is peach, afternoon blue with white clouds. */
+.scene--bedroom .board__art {
+  --wall: #2c1e18;
+  --floor: #2a1c14;
+  --sky-1: #0e1626;
+  --sky-2: #23314d;
+  --hills: #0d1420;
+  --cloud: #3a4560;
+  --cloud-o: 0.55;
+  --moon-o: 1;
+  --stars-o: 1;
+  --ambient: #000;
+  --ambient-o: 0;
+}
+.scene--bedroom .tod-morning {
+  --wall: #5a443a;
+  --floor: #4a3426;
+  --sky-1: #f5c9a4;
+  --sky-2: #fbe7d2;
+  --hills: #8a8f78;
+  --cloud: #fff4ea;
+  --cloud-o: 0.85;
+  --moon-o: 0;
+  --stars-o: 0;
+  --ambient: #ffe3c4;
+  --ambient-o: 0.08;
+}
+.scene--bedroom .tod-afternoon {
+  --wall: #554036;
+  --floor: #463226;
+  --sky-1: #8fb8dc;
+  --sky-2: #d9e8f2;
+  --hills: #6f8a6a;
+  --cloud: #ffffff;
+  --cloud-o: 0.9;
+  --moon-o: 0;
+  --stars-o: 0;
+  --ambient: #eef0ee;
+  --ambient-o: 0.05;
+}
+
+/* Clouds slide past the window, one copy's width per loop (so there's no jump). */
+.bed-clouds { position: absolute; top: 0; left: 0; width: 200%; height: 100%; animation: bed-clouds 150s linear infinite; }
+@keyframes bed-clouds { to { transform: translateX(-50%); } }
+
+/* The cat breathes in its sleep. */
+.bed-cat { animation: bed-cat 4.8s ease-in-out infinite; }
+@keyframes bed-cat { 50% { transform: scale(calc(1 + 0.012 * var(--fx-amp, 1)), calc(1 + 0.05 * var(--fx-amp, 1))); } }
+
+.bed-bulb { animation: scene-twinkle 4.5s ease-in-out infinite; }
+
+/* The desk lamp: warm, dim, off (click it). */
+.bed-lamp-glow { transition: opacity 0.6s ease; }
+.scene--bedroom [data-lamp='1'] .bed-lamp-glow { opacity: 0.5; }
+.scene--bedroom [data-lamp='2'] .bed-lamp-glow { opacity: 0.08; }
